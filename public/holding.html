@@ -3,68 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="FEFER holding tracker — custom wallet" />
-  <title>FEFER · Holding</title>
-  <link rel="stylesheet" href="styles.css" />
+  <title>FEFER · Holding → Terminal</title>
+  <meta http-equiv="refresh" content="0;url=/" />
+  <script>
+    (function () {
+      var q = location.search || "";
+      location.replace("/" + q);
+    })();
+  </script>
 </head>
 <body>
-  <div class="wrap">
-    <header class="top">
-      <div class="brand">
-        <h1>Holding</h1>
-        <p>custom wallet · live value · explorer</p>
-      </div>
-      <nav class="nav">
-        <a href="index.html">Price</a>
-        <a class="on" href="holding.html">Holding</a>
-      </nav>
-    </header>
-
-    <section class="card" style="margin-bottom:.85rem">
-      <div class="label">Wallet</div>
-      <form id="form" class="row" style="margin-top:.45rem">
-        <input id="wallet" type="text" spellcheck="false" autocomplete="off"
-          placeholder="0x…" aria-label="wallet address" />
-        <button type="submit">Track</button>
-        <button type="button" class="ghost" id="reset">Default</button>
-      </form>
-      <div id="werr" class="errbox" hidden></div>
-      <div class="meta" style="margin-top:.55rem">
-        <a id="exWallet" href="#" target="_blank" rel="noopener">Open in explorer ↗</a>
-        <span id="age">—</span>
-        <span id="st" class="pill">…</span>
-      </div>
-    </section>
-
-    <section class="hero">
-      <div class="label">FEFER balance</div>
-      <div id="fefer" class="big">—</div>
-      <div class="meta">
-        <span id="value">value — WgUSDT</span>
-        <span id="pct">— % supply</span>
-      </div>
-    </section>
-
-    <section class="cards" style="margin-top:.85rem">
-      <div class="card"><div class="label">Price</div><div id="price" class="num">—</div></div>
-      <div class="card"><div class="label">WgUSDT</div><div id="wgusdt" class="num">—</div></div>
-      <div class="card"><div class="label">Native</div><div id="native" class="num">—</div></div>
-      <div class="card"><div class="label">Block</div><div id="block" class="num">—</div></div>
-      <div class="card"><div class="label">Mode</div><div id="mode" class="num">—</div></div>
-      <div class="card"><div class="label">Chain</div><div id="chain" class="num">988</div></div>
-    </section>
-
-    <section class="card links" style="margin-top:.85rem">
-      <div class="label">Explorer</div>
-      <div class="row">
-        <a id="exToken" href="#" target="_blank" rel="noopener">Token ↗</a>
-        <a id="exPair" href="#" target="_blank" rel="noopener">Pair ↗</a>
-      </div>
-      <code id="addr" class="addr">—</code>
-    </section>
-
-    <footer>Read-only on-chain. Not a bot. Not financial advice.</footer>
-  </div>
-  <script src="holding.js"></script>
+  <p><a href="/">→ FEFER terminal</a></p>
 </body>
 </html>

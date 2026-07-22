@@ -3,55 +3,98 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="FEFER live price tracker — chain 988 read-only" />
-  <title>FEFER · Price</title>
+  <meta name="description" content="FEFER terminal — live price + wallet watch · chain 988 · read-only" />
+  <title>FEFER · Terminal</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="wrap">
     <header class="top">
       <div class="brand">
-        <h1>FEFER</h1>
-        <p>chain <span id="chain">988</span> · live price · read-only</p>
+        <div class="brand-row">
+          <span class="mark" aria-hidden="true">◇</span>
+          <h1>FEFER</h1>
+          <span class="chip soft">chain <span id="chain">988</span></span>
+        </div>
+        <p>terminal · live reserves · no wallet connect</p>
       </div>
-      <nav class="nav">
-        <a class="on" href="index.html">Price</a>
-        <a href="holding.html">Holding</a>
-      </nav>
+      <div class="top-actions">
+        <span id="st" class="pill">…</span>
+        <span id="age" class="muted">—</span>
+        <span id="mode" class="chip soft">—</span>
+      </div>
     </header>
 
     <section class="hero">
-      <div class="label">Price (WgUSDT / FEFER)</div>
-      <div id="price" class="big">—</div>
-      <div class="meta">
-        <span id="inv">— FEFER / WgUSDT</span>
-        <span id="age">—</span>
-        <span id="st" class="pill">…</span>
+      <div class="hero-main">
+        <div class="label">Price · WgUSDT / FEFER</div>
+        <div id="price" class="big">—</div>
+        <div class="meta">
+          <span id="inv">— FEFER / WgUSDT</span>
+          <span id="block" class="chip soft">block —</span>
+        </div>
       </div>
-      <canvas id="spark" width="720" height="84" aria-label="sparkline"></canvas>
+      <canvas id="spark" width="820" height="92" aria-label="sparkline"></canvas>
     </section>
 
-    <section class="cards" style="margin-top:.85rem">
+    <section class="cards">
       <div class="card"><div class="label">Reserve WgUSDT</div><div id="r0" class="num">—</div></div>
       <div class="card"><div class="label">Reserve FEFER</div><div id="r1" class="num">—</div></div>
       <div class="card"><div class="label">FDV (1B)</div><div id="fdv" class="num">—</div></div>
       <div class="card"><div class="label">Liq ~2× quote</div><div id="liq" class="num">—</div></div>
-      <div class="card"><div class="label">Block</div><div id="block" class="num">—</div></div>
-      <div class="card"><div class="label">Mode</div><div id="mode" class="num">—</div></div>
     </section>
 
-    <section class="card links" style="margin-top:.85rem">
-      <div class="label">Explorer & links</div>
-      <div class="row">
-        <a id="exPair" href="#" target="_blank" rel="noopener">Pair ↗</a>
-        <a id="exToken" href="#" target="_blank" rel="noopener">Token ↗</a>
-        <a href="https://dyorswap.org/launchinfo/?id=0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83&chainId=988" target="_blank" rel="noopener">DYOR ↗</a>
-        <a href="holding.html">Holding wallet →</a>
+    <section class="card watch">
+      <div class="watch-head">
+        <div>
+          <div class="label">Wallet watch</div>
+          <p class="hint">Paste address · bookmark local · no connect</p>
+        </div>
+        <a id="exWallet" class="btn ghost sm" href="#" target="_blank" rel="noopener">Explorer ↗</a>
       </div>
-      <code id="pairCode">pair 0x3dea4be5615974f31624404ef288ba3b36dfeb83</code>
+
+      <form id="form" class="row">
+        <input id="wallet" type="text" spellcheck="false" autocomplete="off"
+          placeholder="0x… paste address" aria-label="wallet address" />
+        <button type="submit">Track</button>
+        <button type="button" class="ghost" id="add" title="Save bookmark">★</button>
+        <button type="button" class="ghost" id="reset">Default</button>
+      </form>
+      <div id="werr" class="errbox" hidden></div>
+      <div id="chips" class="chips" aria-label="bookmarks"></div>
+
+      <div class="hold-grid">
+        <div>
+          <div class="label">FEFER balance</div>
+          <div id="fefer" class="mid">—</div>
+          <div class="meta tight">
+            <span id="value">value —</span>
+            <span id="pct">— % supply</span>
+          </div>
+        </div>
+        <div class="mini-cards">
+          <div class="card flat"><div class="label">WgUSDT</div><div id="wgusdt" class="num">—</div></div>
+          <div class="card flat"><div class="label">Native</div><div id="native" class="num">—</div></div>
+          <div class="card flat"><div class="label">Hold block</div><div id="hBlock" class="num">—</div></div>
+        </div>
+      </div>
+      <code id="addr" class="addr">—</code>
     </section>
 
-    <footer>Public RPC only. Not financial advice. No private keys. Quote = WgUSDT on-chain (≠ USD oracle).</footer>
+    <section class="card links">
+      <div class="label">Links</div>
+      <div class="row links-row">
+        <a id="exPair" class="link-pill" href="#" target="_blank" rel="noopener">Pair ↗</a>
+        <a id="exToken" class="link-pill" href="#" target="_blank" rel="noopener">Token ↗</a>
+        <a id="dyor" class="link-pill" href="#" target="_blank" rel="noopener">DYOR ↗</a>
+        <a id="bridge" class="link-pill accent" href="#" target="_blank" rel="noopener">Bridge · Stargate ↗</a>
+      </div>
+      <code id="pairCode" class="addr">pair —</code>
+    </section>
+
+    <footer>
+      Public RPC only · bookmarks stay in this browser · not financial advice · quote = WgUSDT on-chain (≠ USD oracle)
+    </footer>
   </div>
   <script src="app.js"></script>
 </body>

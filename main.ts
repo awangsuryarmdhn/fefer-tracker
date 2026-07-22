@@ -6,11 +6,19 @@ const QUOTE = (Deno.env.get("QUOTE_TOKEN") ?? "0x817997ca8394e26cce3de3a076a4889
 const TOKEN_DEC = Number(Deno.env.get("TOKEN_DECIMALS") ?? "18");
 const QUOTE_DEC = Number(Deno.env.get("QUOTE_DECIMALS") ?? "18");
 const CHAIN_ID = Number(Deno.env.get("CHAIN_ID") ?? "988");
-const DEFAULT_WALLET = (Deno.env.get("DEFAULT_WALLET") ?? "0x1E1afF9d9E387D69b89839E477e63f24e5Ec12C5");
+const DEFAULT_WALLET = Deno.env.get("DEFAULT_WALLET") ?? "0x1E1afF9d9E387D69b89839E477e63f24e5Ec12C5";
 const EXPLORER = (Deno.env.get("EXPLORER_BASE") ?? "https://stablescan.xyz").replace(/\/$/, "");
+const BRIDGE_URL = Deno.env.get("BRIDGE_URL") ??
+  "https://stargate.finance/?srcChain=plasma&srcToken=0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb&dstChain=stable&dstToken=0x779Ded0c9e1022225f8E0630b35a9b54bE713736";
+const DYOR_URL = Deno.env.get("DYOR_URL") ??
+  `https://dyorswap.org/launchinfo/?id=${TOKEN}&chainId=${CHAIN_ID}`;
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
 const SUPPLY = 1e9;
 const PUBLIC = new URL("./public/", import.meta.url);
+
+// ponytail: in-mem cache; shared store if multi-isolate cold starts hurt
+let priceCache: { at: number; data: Awaited<ReturnType<typeof fetchPrice>> } | null = null;
+const CACHE_MS = 4000;
 
 async function rpc(method: string, params: unknown[] = []) {
   const r = await fetch(RPC, {
@@ -33,7 +41,7 @@ function fromHex(hex: string, dec: number) {
   return Number(BigInt("0x" + (h || "0"))) / 10 ** dec;
 }
 
-async function getPrice() {
+async function fetchPrice() {
   const [resHex, blockHex] = await Promise.all([
     rpc("eth_call", [{ to: PAIR, data: "0x0902f1ac" }, "latest"]),
     rpc("eth_blockNumber", []),
@@ -58,6 +66,14 @@ async function getPrice() {
     chainId: CHAIN_ID,
     ts: Math.floor(Date.now() / 1000),
   };
+}
+
+async function getPrice() {
+  const now = Date.now();
+  if (priceCache && now - priceCache.at < CACHE_MS) return priceCache.data;
+  const data = await fetchPrice();
+  priceCache = { at: now, data };
+  return data;
 }
 
 async function getHolding(wallet: string) {
@@ -156,6 +172,8 @@ Deno.serve({ port: PORT }, async (req) => {
         quoteSymbol: Deno.env.get("QUOTE_SYMBOL") ?? "WgUSDT",
         defaultWallet: DEFAULT_WALLET,
         explorerBase: EXPLORER,
+        bridgeUrl: BRIDGE_URL,
+        dyorUrl: DYOR_URL,
         supply: SUPPLY,
       });
     }
