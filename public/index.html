@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="FEFER live price tracker — chain 988 read-only" />
+  <title>FEFER · Price</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <h1>FEFER</h1>
+        <p>chain <span id="chain">988</span> · live price · read-only</p>
+      </div>
+      <nav class="nav">
+        <a class="on" href="index.html">Price</a>
+        <a href="holding.html">Holding</a>
+      </nav>
+    </header>
+
+    <section class="hero">
+      <div class="label">Price (WgUSDT / FEFER)</div>
+      <div id="price" class="big">—</div>
+      <div class="meta">
+        <span id="inv">— FEFER / WgUSDT</span>
+        <span id="age">—</span>
+        <span id="st" class="pill">…</span>
+      </div>
+      <canvas id="spark" width="720" height="84" aria-label="sparkline"></canvas>
+    </section>
+
+    <section class="cards" style="margin-top:.85rem">
+      <div class="card"><div class="label">Reserve WgUSDT</div><div id="r0" class="num">—</div></div>
+      <div class="card"><div class="label">Reserve FEFER</div><div id="r1" class="num">—</div></div>
+      <div class="card"><div class="label">FDV (1B)</div><div id="fdv" class="num">—</div></div>
+      <div class="card"><div class="label">Liq ~2× quote</div><div id="liq" class="num">—</div></div>
+      <div class="card"><div class="label">Block</div><div id="block" class="num">—</div></div>
+      <div class="card"><div class="label">Mode</div><div id="mode" class="num">—</div></div>
+    </section>
+
+    <section class="card links" style="margin-top:.85rem">
+      <div class="label">Explorer & links</div>
+      <div class="row">
+        <a id="exPair" href="#" target="_blank" rel="noopener">Pair ↗</a>
+        <a id="exToken" href="#" target="_blank" rel="noopener">Token ↗</a>
+        <a href="https://dyorswap.org/launchinfo/?id=0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83&chainId=988" target="_blank" rel="noopener">DYOR ↗</a>
+        <a href="holding.html">Holding wallet →</a>
+      </div>
+      <code id="pairCode">pair 0x3dea4be5615974f31624404ef288ba3b36dfeb83</code>
+    </section>
+
+    <footer>Public RPC only. Not financial advice. No private keys. Quote = WgUSDT on-chain (≠ USD oracle).</footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

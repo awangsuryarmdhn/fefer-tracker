@@ -1,0 +1,25 @@
+name: Deploy Deno
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Deploy to Deno Deploy
+        uses: denoland/deployctl@v1
+        with:
+          project: ${{ secrets.DENO_PROJECT }}
+          entrypoint: main.ts
+          # Prefer OIDC (id-token) when project linked to GitHub.
+          # Fallback classic token:
+          # token: ${{ secrets.DENO_DEPLOY_TOKEN }}
