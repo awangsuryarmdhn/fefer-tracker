@@ -21,14 +21,15 @@ Not financial advice. No private keys. Quote = WgUSDT on-chain (≠ USD oracle).
 ## Run (Deno)
 
 ```bash
-cp .env.example .env
 deno task start
 # http://localhost:8000
 # http://localhost:8000/?wallet=0x…
 ```
 
 ```bash
-deno task dev   # watch
+deno task dev          # watch
+# optional overrides:
+# cp .env.example .env && deno task start:env
 ```
 
 ## API
@@ -55,10 +56,34 @@ No server session. Clear site data → bookmarks gone.
 
 ## Deno Deploy
 
+**Defaults in `main.ts` work with zero env.** Leave Environment Variables empty unless you override.
+
+### Error: `envVars[0].key` / `too_small`
+
+Deno Deploy rejected an **empty env var name**. Fix:
+
+- Dashboard → project → **Settings → Environment Variables**
+- Delete any row with blank **Name** (or `=` with nothing before it)
+- Do **not** paste whole `.env` / blank lines into the env UI
+- Redeploy with **no** env, or only full `NAME=value` pairs
+- Skip `PORT` on Deploy (platform binds the port)
+
+### Console
 1. [console.deno.com](https://console.deno.com) → **New project** → GitHub → this repo  
 2. Entrypoint: **`main.ts`** (repo root)  
-3. Env = keys from `.env.example` (optional; defaults work)  
-4. Or CLI: `deno task deploy` with `DENO_PROJECT` set  
+3. Env: **none** (or only real keys from `.env.example`)  
+4. Deploy  
+
+### GitHub Actions
+Secret **`DENO_PROJECT`** = project name only (non-empty).  
+Workflow: `.github/workflows/deploy.yml` (OIDC; no blank secrets).
+
+### CLI
+```bash
+deployctl deploy --project=YOUR_PROJECT --entrypoint=main.ts
+```
+
+Local optional overrides: `.env` from `.env.example`, then `deno task start:env`.
 
 Docs: https://docs.deno.com/deploy/manual/
 
