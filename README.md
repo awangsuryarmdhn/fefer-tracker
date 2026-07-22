@@ -18,7 +18,9 @@ Public **read-only** FEFER tracker — live price + wallet watch on chain **988*
 
 Not financial advice. No private keys. Quote = WgUSDT on-chain (≠ USD oracle).
 
-## Run (Deno)
+## Run (local)
+
+Defaults in `main.ts` — **no `.env` required**.
 
 ```bash
 deno task start
@@ -27,10 +29,41 @@ deno task start
 ```
 
 ```bash
-deno task dev          # watch
-# optional overrides:
-# cp .env.example .env && deno task start:env
+deno task dev   # watch
 ```
+
+### Env (all optional)
+
+**Required env = none.** Defaults in `main.ts`. App runs with empty env.
+
+| Key | Default | Local | Deno Deploy |
+|---|---|---|---|
+| `RPC_URL` | `https://rpc.stable.xyz` | optional | optional |
+| `CHAIN_ID` | `988` | optional | optional |
+| `PAIR` | FEFER/WgUSDT pair | optional | optional |
+| `TOKEN` | FEFER | optional | optional |
+| `TOKEN_SYMBOL` | `FEFER` | optional | optional |
+| `TOKEN_DECIMALS` | `18` | optional | optional |
+| `QUOTE_TOKEN` | WgUSDT | optional | optional |
+| `QUOTE_SYMBOL` | `WgUSDT` | optional | optional |
+| `QUOTE_DECIMALS` | `18` | optional | optional |
+| `DEFAULT_WALLET` | seed watch wallet | optional | optional |
+| `EXPLORER_BASE` | `https://stablescan.xyz` | optional | optional |
+| `BRIDGE_URL` | Stargate Plasma→Stable | optional | optional |
+| `DYOR_URL` | DYOR launchinfo | optional | optional |
+| `PORT` | `8000` | optional | **do not set** — platform binds HTTP |
+| `DENO_REGION` / `DENO_DEPLOYMENT_ID` | — | n/a | **auto** — do not set |
+
+```bash
+cp .env.example .env
+# edit only what you need
+deno task start:env
+```
+
+`.env` gitignored. Template: `.env.example`.
+
+**Deno Deploy (docs):** dashboard **Settings → Environment Variables** — name + value only. No blank names, no paste whole `.env` with empty lines → `envVars[0].key too_small`.  
+Docs: https://docs.deno.com/deploy/classic/environment-variables/
 
 ## API
 
@@ -54,36 +87,23 @@ Static fallback: serve `public/` alone — browser hits RPC direct if `/api/*` m
 UI: paste → **Track** · **★** save chip · chip **×** remove · **Default** reset.  
 No server session. Clear site data → bookmarks gone.
 
-## Deno Deploy
+## Deploy (manual only — no CI)
 
-**Defaults in `main.ts` work with zero env.** Leave Environment Variables empty unless you override.
+No GitHub Actions / auto-deploy in this repo. You deploy when ready.
 
-### Error: `envVars[0].key` / `too_small`
-
-Deno Deploy rejected an **empty env var name**. Fix:
-
-- Dashboard → project → **Settings → Environment Variables**
-- Delete any row with blank **Name** (or `=` with nothing before it)
-- Do **not** paste whole `.env` / blank lines into the env UI
-- Redeploy with **no** env, or only full `NAME=value` pairs
-- Skip `PORT` on Deploy (platform binds the port)
-
-### Console
 1. [console.deno.com](https://console.deno.com) → **New project** → GitHub → this repo  
-2. Entrypoint: **`main.ts`** (repo root)  
-3. Env: **none** (or only real keys from `.env.example`)  
+2. Entrypoint: **`main.ts`**  
+3. Env: **empty** (defaults work), or set keys one-by-one from `.env.example`  
 4. Deploy  
 
-### GitHub Actions
-Secret **`DENO_PROJECT`** = project name only (non-empty).  
-Workflow: `.github/workflows/deploy.yml` (OIDC; no blank secrets).
+CLI (optional):
 
-### CLI
 ```bash
 deployctl deploy --project=YOUR_PROJECT --entrypoint=main.ts
 ```
 
-Local optional overrides: `.env` from `.env.example`, then `deno task start:env`.
+- Do **not** paste whole `.env` / blank lines into env UI → `envVars[0].key too_small`
+- Skip `PORT` on Deploy (platform binds the port)
 
 Docs: https://docs.deno.com/deploy/manual/
 
@@ -101,3 +121,5 @@ public/
   app.js
   styles.css
   holding.html   redirect
+.env.example     optional overrides (copy → .env)
+```
