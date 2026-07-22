@@ -3,8 +3,5 @@
     "start": "deno run -A main.ts",
     "dev": "deno run -A --watch main.ts",
     "start:env": "deno run -A --env-file=.env main.ts"
-  },
-  "compilerOptions": {
-    "lib": ["deno.window", "deno.unstable"]
   }
 }

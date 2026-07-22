@@ -145,7 +145,9 @@ async function staticFile(pathname: string) {
   }
 }
 
-Deno.serve({ port: PORT }, async (req) => {
+// Deploy: platform binds HTTP (omit port). Local: listen PORT.
+const ON_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
+Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
   const url = new URL(req.url);
   const { pathname } = url;
@@ -179,10 +181,9 @@ Deno.serve({ port: PORT }, async (req) => {
     }
     if (pathname === "/api/price") return json(await getPrice());
     if (pathname === "/api/holding" || pathname.startsWith("/api/holding/")) {
-      const q = url.searchParams.get("wallet")
-        ?? pathname.replace(/^\/api\/holding\/?/, "")
-        || DEFAULT_WALLET;
-      return json(await getHolding(q || DEFAULT_WALLET));
+      const fromPath = pathname.replace(/^\/api\/holding\/?/, "");
+      const q = url.searchParams.get("wallet") || fromPath || DEFAULT_WALLET;
+      return json(await getHolding(q));
     }
     return await staticFile(pathname);
   } catch (e) {
@@ -190,4 +191,4 @@ Deno.serve({ port: PORT }, async (req) => {
   }
 });
 
-console.log(`FEFER tracker http://127.0.0.1:${PORT}`);
+if (!ON_DEPLOY) console.log(`FEFER tracker http://127.0.0.1:${PORT}`);
