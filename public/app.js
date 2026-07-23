@@ -31,6 +31,10 @@
   let lastIdr = { rate: 16200, source: "fallback" };
   let lastPriceData = null;
   let lastHoldData = null;
+  let didInitPaint = false;
+  let skipNextStatus = false;
+  let initSnap = null;
+  try { initSnap = window.__FEFER_INIT__ || null; } catch {}
   const $ = (id) => document.getElementById(id);
 
   function fmt(n, d = 6) {
@@ -418,7 +422,11 @@
   function paintHold(d) {
     lastHoldData = d;
     $("fefer").textContent = fmt(d.fefer, 4);
-    const v = toDisplayValue(d.value);
+    // prefer server-precomputed (heavy server, exact at snapshot)
+    let v;
+    if (currentCurrency === "IDR" && Number.isFinite(d.valueIdr)) v = d.valueIdr;
+    else if (currentCurrency === "USDT" && Number.isFinite(d.valueUsdt)) v = d.valueUsdt;
+    else v = toDisplayValue(d.value);
     $("value").textContent = fmt(v, currentCurrency === "IDR" ? 0 : 4);
     $("pct").textContent = fmt(d.pctSupply, 6) + "% of supply";
     $("wgusdt").textContent = fmt(d.wgusdt, 4);
@@ -457,7 +465,11 @@
           updateRateHint();
         }
         if (document.hidden && !force) return;
-        setStatus(null, "updating…");
+        if (skipNextStatus) {
+          skipNextStatus = false;
+        } else {
+          setStatus(null, "updating…");
+        }
         const snap = await fetchSnapshot(wallet);
         lastPriceData = snap.price;
         lastHoldData = snap.holding;
@@ -545,6 +557,29 @@
       navigator.serviceWorker.register("/sw.js").catch(() => {});
     });
   }
+
+  // === Server-heavy hydrate: instant paint from embedded __FEFER_INIT__ (default wallet) ===
+  // Client is thin renderer. All math, rate, valueUsdt/valueIdr done on server.
+  (function hydrateFromServer() {
+    if (!initSnap || !initSnap.ok || !initSnap.price || !initSnap.holding) return;
+    // skip if explicit ?wallet= (different bag) — let tick fetch the right one
+    const qWallet = new URLSearchParams(location.search).get("wallet");
+    if (valid(qWallet)) return;
+    try {
+      currentCurrency = loadCurrency();
+      if (initSnap.idr) lastIdr = initSnap.idr;
+      lastPriceData = initSnap.price;
+      lastHoldData = initSnap.holding;
+      paintPrice(initSnap.price);
+      paintHold(initSnap.holding);
+      updateRateHint();
+      const age = $("age");
+      if (age) age.textContent = new Date().toLocaleTimeString();
+      setStatus(true, "live");
+      skipNextStatus = true;
+      didInitPaint = true;
+    } catch {}
+  })();
 
   tick(true);
 })();

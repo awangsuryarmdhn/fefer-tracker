@@ -352,15 +352,27 @@ async function getHolding(wallet: string) {
   return data;
 }
 
-/** One payload for UI — client = 1 HTTP. Adds idr for USD/IDR toggle. */
+function warmCaches() {
+  getPrice().catch(() => {});
+  getIdrRate().catch(() => {});
+  getHolding(DEFAULT_WALLET).catch(() => {}); // server-heavy: prewarm default bag
+}
+warmCaches();
+
+/** One payload for UI — client = 1 HTTP. Heavy server: precompute both currency values. */
 async function getSnapshot(wallet: string) {
   const hold = await getHolding(wallet);
   const price = priceCache?.data ?? await getPrice();
   const idr = await getIdrRate();
+  const rate = idr.rate || 0;
   return {
     ok: true as const,
     price,
-    holding: hold,
+    holding: {
+      ...hold,
+      valueUsdt: hold.value,
+      valueIdr: hold.value * rate,
+    },
     idr,
     engine: {
       host: lastRpcHost || null,
@@ -430,6 +442,24 @@ async function staticFile(pathname: string) {
   }
 }
 
+// --- Server-heavy init embed for default wallet (zero-jank first paint) ---
+let indexTemplate: string | null = null;
+async function getIndexTemplate(): Promise<string> {
+  if (indexTemplate) return indexTemplate;
+  const file = new URL("index.html", PUBLIC);
+  indexTemplate = new TextDecoder().decode(await Deno.readFile(file));
+  return indexTemplate;
+}
+
+async function buildIndexWithInit(init: unknown): Promise<string> {
+  const tpl = await getIndexTemplate();
+  const json = init ? JSON.stringify(init) : "null";
+  // inject right before the app script for instant hydrate
+  const tag = '<script src="app.js" defer></script>';
+  const injected = `<script>window.__FEFER_INIT__ = ${json};</script>\n  ${tag}`;
+  return tpl.replace(tag, injected);
+}
+
 const ON_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
 Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
@@ -494,6 +524,25 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
         200,
         `public, max-age=2, stale-while-revalidate=${Math.max(2, Math.floor(HOLD_MS / 1000))}`,
       );
+    }
+    // Server-heavy: embed initial snapshot for default wallet on first HTML load (zero-jank)
+    if (pathname === "/" || pathname === "/index.html") {
+      try {
+        // Prefer hot caches; getSnapshot will hit them or compute fast
+        const snap = await Promise.race([
+          getSnapshot(DEFAULT_WALLET),
+          new Promise<null>((r) => setTimeout(() => r(null), 1200)),
+        ]);
+        const html = await buildIndexWithInit(snap && snap.ok ? snap : null);
+        return new Response(html, {
+          headers: cors({
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-cache",
+          }),
+        });
+      } catch {
+        // fall through to static
+      }
     }
     return await staticFile(pathname);
   } catch (e) {

@@ -22,7 +22,8 @@ for (const f of files) console.log(f, existsSync(f) ? "ok" : "MISSING");
 console.log("manifest link", h.includes("manifest.webmanifest") ? "ok" : "MISS");
 console.log("sw reg", j.includes("serviceWorker") ? "ok" : "MISS");
 console.log("snapshot", j.includes("/api/snapshot") ? "ok" : "MISS");
-console.log("no eth_ client", !j.includes("eth_") ? "ok" : "BAD");
+const hasRawRpc = /eth_call|eth_getBalance|eth_blockNumber|0x0902f1ac|0x70a08231/.test(j);
+console.log("no raw rpc client", !hasRawRpc ? "ok" : "BAD");
 console.log("no RPC_URL client", !j.includes("RPC_URL") && !j.includes("rpc.stable") ? "ok" : "check");
 
 const main = readFileSync("main.ts", "utf8");
