@@ -1,5 +1,5 @@
 /* FEFER PWA — shell cache only; API always network */
-const CACHE = "fefer-shell-v2";
+const CACHE = "fefer-shell-v3";
 const SHELL = [
   "/",
   "/index.html",

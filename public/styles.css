@@ -39,7 +39,7 @@ a{color:var(--mint);text-decoration:none}
 }
 @keyframes drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(2%,3%,0) scale(1.06)}}
 
-.wrap{position:relative;z-index:1;max-width:720px;margin:0 auto;padding:1rem .95rem 2.4rem}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:1.05rem 1rem 2.6rem}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .muted{color:var(--muted);font-size:.86rem}
 .tiny{font-size:.78rem}
@@ -106,8 +106,8 @@ a{color:var(--mint);text-decoration:none}
   background:linear-gradient(90deg,var(--mint2),var(--sakura));
   transition:width .45s var(--ease);box-shadow:0 0 10px rgba(154,217,182,.3);max-width:100%}
 
-.mini-row{display:grid;grid-template-columns:1.2fr .9fr .8fr;gap:.45rem;margin:.15rem 0 .85rem}
-.mini{padding:.55rem .6rem;border-radius:12px;border:1px solid var(--line);
+.mini-row{display:grid;grid-template-columns:1.25fr .9fr .8fr;gap:.5rem;margin:.2rem 0 .75rem}
+.mini{padding:.6rem .65rem;border-radius:13px;border:1px solid var(--line);
   background:rgba(9,13,17,.55);min-width:0}
 .mini .num{display:block;margin-top:.2rem;font-family:var(--mono);font-size:.92rem;font-weight:700;
   font-variant-numeric:tabular-nums;word-break:break-word}
@@ -116,6 +116,32 @@ a{color:var(--mint);text-decoration:none}
 .num-row .num{margin-top:0}
 .unit-sm{font-family:var(--mono);font-size:.7rem;font-weight:700;color:var(--muted);letter-spacing:.04em}
 .accent-usdt{color:var(--mint)!important;font-weight:740}
+
+/* Buy / Sell — primary CTA (Telegram BasedBot) */
+.trade-cta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:0 0 .85rem}
+.cta{display:flex;align-items:center;gap:.65rem;min-height:3.1rem;padding:.65rem .85rem;
+  border-radius:14px;border:1px solid transparent;text-decoration:none;color:inherit;
+  transition:transform .12s,filter .15s,box-shadow .15s,border-color .15s}
+.cta:active{transform:translateY(1px)}
+.cta-ico{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:9px;
+  font-size:.72rem;font-weight:800;flex-shrink:0;line-height:1}
+.cta-copy{display:flex;flex-direction:column;gap:.05rem;min-width:0;line-height:1.15}
+.cta-copy strong{font-size:.98rem;font-weight:780;letter-spacing:.01em}
+.cta-copy em{font-style:normal;font-size:.68rem;font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;opacity:.72}
+.cta-buy{color:#04110b;border-color:rgba(126,224,168,.35);
+  background:linear-gradient(145deg,#7ee0a8 0%,#5fb88a 55%,#4aa876 100%);
+  box-shadow:0 8px 22px rgba(95,184,138,.28),0 0 0 1px rgba(255,255,255,.06) inset}
+.cta-buy .cta-ico{background:rgba(4,17,11,.14);color:#04110b}
+.cta-buy:hover{filter:brightness(1.05);box-shadow:0 10px 26px rgba(95,184,138,.36)}
+.cta-sell{color:var(--text);border-color:rgba(244,180,196,.4);
+  background:linear-gradient(145deg,rgba(244,180,196,.18),rgba(18,12,14,.92) 55%,rgba(12,10,12,.98));
+  box-shadow:0 8px 22px rgba(0,0,0,.28),0 0 0 1px rgba(244,180,196,.08) inset}
+.cta-sell .cta-ico{background:rgba(244,180,196,.16);color:var(--sakura)}
+.cta-sell .cta-copy strong{color:var(--sakura)}
+.cta-sell .cta-copy em{color:var(--muted)}
+.cta-sell:hover{filter:brightness(1.06);border-color:rgba(244,180,196,.55);
+  box-shadow:0 10px 26px rgba(224,122,122,.14)}
 
 .track-row{display:flex;flex-wrap:wrap;gap:.45rem;align-items:stretch}
 .input-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:.3rem;
@@ -195,8 +221,8 @@ button.ghost:hover,.btn.ghost:hover{background:rgba(154,217,182,.08);filter:none
 .delta.down{color:var(--down);background:rgba(240,160,168,.1);border-color:rgba(240,160,168,.28)}
 .delta.flat{color:var(--muted);background:rgba(122,144,134,.08);border-color:var(--line)}
 
-.price-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;
-  padding:.6rem .7rem;border-top:1px solid rgba(154,217,182,.1);background:rgba(9,13,17,.45)}
+.price-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.5rem;
+  padding:.7rem .8rem;border-top:1px solid rgba(154,217,182,.1);background:rgba(9,13,17,.45)}
 .price-strip > div{min-width:0}
 .price-strip .eyebrow{display:block;font-size:.6rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   color:var(--muted);margin-bottom:.15rem}
@@ -228,7 +254,7 @@ button.ghost:hover,.btn.ghost:hover{background:rgba(154,217,182,.08);filter:none
 .market-fold > summary::after{content:"+";font-family:var(--mono);color:var(--muted);font-size:1rem}
 .market-fold[open] > summary::after{content:"−"}
 .market-fold .cards{padding:0 .75rem .85rem}
-.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
+.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.6rem}
 .card{background:linear-gradient(180deg,rgba(16,22,29,.95),var(--card));border:1px solid var(--line);
   border-radius:var(--r-sm);padding:.75rem .8rem}
 .card.metric{position:relative;overflow:hidden}
@@ -246,6 +272,8 @@ button.ghost:hover,.btn.ghost:hover{background:rgba(154,217,182,.08);filter:none
 .link-pill i{font-style:normal;opacity:.55;font-size:.76rem}
 .link-pill:hover{color:var(--mint);border-color:rgba(154,217,182,.4);background:rgba(154,217,182,.07)}
 .link-pill.accent{color:var(--sakura);border-color:rgba(244,180,196,.4);background:var(--sakura2)}
+.link-pill.tg{color:#7ec8f0;border-color:rgba(126,200,240,.4);background:rgba(126,200,240,.1)}
+.link-pill.tg:hover{color:#a8dcff;border-color:rgba(126,200,240,.55);background:rgba(126,200,240,.14)}
 
 footer{margin-top:1.25rem;color:var(--muted);font-size:.76rem;line-height:1.55}
 .foot-row{display:flex;flex-wrap:wrap;gap:.3rem .4rem;align-items:center}
@@ -254,9 +282,12 @@ footer{margin-top:1.25rem;color:var(--muted);font-size:.76rem;line-height:1.55}
 
 /* mobile */
 @media (max-width:640px){
-  .price-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .price-strip{grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem}
   .mini-row{grid-template-columns:1fr 1fr;gap:.4rem}
   .mini:last-child{grid-column:1 / -1}
+  .trade-cta{gap:.4rem;margin-bottom:.75rem}
+  .cta{min-height:2.95rem;padding:.58rem .7rem;gap:.5rem}
+  .cta-copy strong{font-size:.92rem}
   .track-row .input-wrap{flex:1 1 100%}
   .track-row .btn.primary{flex:1}
   .value-big{font-size:clamp(1.85rem,10vw,2.55rem)}
@@ -264,15 +295,22 @@ footer{margin-top:1.25rem;color:var(--muted);font-size:.76rem;line-height:1.55}
   .wallet-bar{flex-direction:column;align-items:stretch}
   .wallet-bar-actions{width:100%}
   .wallet-bar-actions .btn{flex:1;justify-content:center}
+  .links-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.4rem}
+  .link-pill{justify-content:center}
 }
 @media (max-width:400px){
   .wrap{padding:.85rem .7rem 2rem}
   .bag-hero{padding:.9rem .8rem}
   .cards{grid-template-columns:1fr}
   .chart-frame{height:min(48vh,360px);min-height:260px}
+  .cta-copy em{display:none}
+  .cta{justify-content:center}
 }
 @media (min-width:720px){
   .market-fold[open] .cards,.market-fold .cards{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .mini-row{grid-template-columns:1.3fr 1fr 1fr}
+  .trade-cta{gap:.55rem}
+  .cta{min-height:3.25rem;padding:.72rem 1rem}
 }
 @media (prefers-reduced-motion:reduce){
   .orb,.k-dot,.pill .dot,.pct-bar i{animation:none!important;transition:none!important}

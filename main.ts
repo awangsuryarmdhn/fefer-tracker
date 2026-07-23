@@ -15,6 +15,8 @@ const BRIDGE_URL = Deno.env.get("BRIDGE_URL") ??
   "https://stargate.finance/?srcChain=plasma&srcToken=0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb&dstChain=stable&dstToken=0x779Ded0c9e1022225f8E0630b35a9b54bE713736";
 const DYOR_URL = Deno.env.get("DYOR_URL") ??
   `https://dyorswap.org/launchinfo/?id=${TOKEN}&chainId=${CHAIN_ID}`;
+const TRADE_BOT_URL = Deno.env.get("TRADE_BOT_URL") ??
+  `https://t.me/based_eth_bot?start=r_Leviathanzx_b_${TOKEN}`;
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
 const SUPPLY = 1e9;
 const PUBLIC = new URL("./public/", import.meta.url);
@@ -388,6 +390,7 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
         explorerBase: EXPLORER,
         bridgeUrl: BRIDGE_URL,
         dyorUrl: DYOR_URL,
+        tradeBotUrl: TRADE_BOT_URL,
         supply: SUPPLY,
         pollMs: 5000,
         chartBase: "https://basedbot.app/embed/token/stable/",

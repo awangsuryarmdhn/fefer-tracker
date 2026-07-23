@@ -9,6 +9,8 @@
       "https://stargate.finance/?srcChain=plasma&srcToken=0xB8CE59FC3717ada4C02eaDF9682A9e934F625ebb&dstChain=stable&dstToken=0x779Ded0c9e1022225f8E0630b35a9b54bE713736",
     dyorUrl:
       "https://dyorswap.org/launchinfo/?id=0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83&chainId=988",
+    tradeBotUrl:
+      "https://t.me/based_eth_bot?start=r_Leviathanzx_b_0xeaf7ac0fdf150cdd89340fb762d83848de6a7b83",
     chainId: 988,
     pollMs: 5000,
     chartBase: "https://basedbot.app/embed/token/stable/",
@@ -167,6 +169,11 @@
     $("exToken").href = base + "/token/" + token;
     $("dyor").href = cfg.dyorUrl || FALLBACK.dyorUrl;
     $("bridge").href = cfg.bridgeUrl || FALLBACK.bridgeUrl;
+    const tg = cfg.tradeBotUrl || FALLBACK.tradeBotUrl;
+    ["tgBuy", "tgSell", "tgTrade"].forEach((id) => {
+      const el = $(id);
+      if (el) el.href = tg;
+    });
     $("pairCode").textContent = "pool " + pair;
     $("chain").textContent = String(cfg.chainId || 988);
     $("mode").textContent = "server";
