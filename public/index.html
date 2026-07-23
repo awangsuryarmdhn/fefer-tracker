@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#07090c" />
-  <meta name="description" content="FEFER terminal — live price + wallet watch · chain 988 · read-only" />
-  <title>FEFER · Terminal</title>
+  <meta name="description" content="FEFER tracker — live price + your bag · simple · read-only" />
+  <title>FEFER · Price & Assets</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -22,69 +22,74 @@
         <div class="brand-row">
           <span class="mark" aria-hidden="true"><span class="mark-core"></span></span>
           <div>
-            <h1>FEFER <span class="tag">terminal</span></h1>
-            <p>live reserves · paste any 0x · no wallet connect</p>
+            <h1>FEFER</h1>
+            <p>Price & your assets · live · no wallet connect</p>
           </div>
-          <span class="chip soft">chain <span id="chain">988</span></span>
         </div>
       </div>
       <div class="top-actions">
         <span id="st" class="pill"><i class="dot" aria-hidden="true"></i><span class="pill-txt">…</span></span>
         <span id="age" class="muted mono">—</span>
-        <span id="mode" class="chip soft">—</span>
       </div>
     </header>
 
-    <section class="hero">
+    <!-- 1) PRICE -->
+    <section class="hero focus">
       <div class="hero-glow" aria-hidden="true"></div>
+      <div class="section-kicker">Price</div>
       <div class="hero-main">
-        <div class="label-row">
-          <div class="label">Price · WgUSDT / FEFER</div>
-          <span id="delta" class="delta flat">—</span>
+        <div class="token-head">
+          <img id="tokenLogo" class="token-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="48" height="48" loading="lazy" onerror="this.style.display='none'" />
+          <div class="token-head-text">
+            <div class="label-row">
+              <div class="label">1 FEFER in USDT</div>
+              <span id="delta" class="delta flat">—</span>
+            </div>
+            <div class="price-row">
+              <div id="price" class="big">—</div>
+              <span class="unit">USDT</span>
+            </div>
+          </div>
         </div>
-        <div id="price" class="big">—</div>
         <div class="meta">
-          <span id="inv" class="mono">— FEFER / WgUSDT</span>
-          <span id="block" class="chip soft">block —</span>
+          <span id="inv" class="mono muted">— FEFER per 1 USDT</span>
+          <span id="block" class="chip soft">updated —</span>
+        </div>
+        <div class="price-strip" aria-label="market strip">
+          <div>
+            <span class="eyebrow">Market cap</span>
+            <strong id="stripFdv">—</strong>
+          </div>
+          <div>
+            <span class="eyebrow">Liquidity</span>
+            <strong id="stripLiq">—</strong>
+          </div>
+          <div>
+            <span class="eyebrow">USDT in pool</span>
+            <strong id="stripR0">—</strong>
+          </div>
+          <div class="holder-stat">
+            <span class="eyebrow">Holders</span>
+            <a id="stripHolders" class="strip-link" href="#" target="_blank" rel="noopener">VIEW ↗</a>
+          </div>
         </div>
       </div>
       <div class="spark-wrap">
-        <canvas id="spark" width="820" height="110" aria-label="price sparkline"></canvas>
+        <canvas id="spark" width="820" height="110" aria-label="price chart"></canvas>
       </div>
     </section>
 
-    <section class="cards">
-      <div class="card metric">
-        <div class="metric-ico" aria-hidden="true">◈</div>
-        <div class="label">Reserve WgUSDT</div>
-        <div id="r0" class="num">—</div>
-      </div>
-      <div class="card metric">
-        <div class="metric-ico" aria-hidden="true">◇</div>
-        <div class="label">Reserve FEFER</div>
-        <div id="r1" class="num">—</div>
-      </div>
-      <div class="card metric">
-        <div class="metric-ico" aria-hidden="true">◎</div>
-        <div class="label">FDV (1B)</div>
-        <div id="fdv" class="num">—</div>
-      </div>
-      <div class="card metric">
-        <div class="metric-ico" aria-hidden="true">≋</div>
-        <div class="label">Liq ~2× quote</div>
-        <div id="liq" class="num">—</div>
-      </div>
-    </section>
-
-    <section class="card watch">
+    <!-- 2) YOUR BAG -->
+    <section class="card watch focus">
+      <div class="section-kicker">Your bag</div>
       <div class="watch-head">
         <div>
-          <div class="label">Wallet watch</div>
-          <p class="hint">Paste address · ★ bookmark local · share via ?wallet=</p>
+          <div class="label">Your assets</div>
+          <p class="hint">Paste wallet address · see FEFER + value · save with ★</p>
         </div>
         <div class="watch-actions">
           <button type="button" class="btn ghost sm" id="copy" title="Copy address">Copy</button>
-          <a id="exWallet" class="btn ghost sm" href="#" target="_blank" rel="noopener">Explorer ↗</a>
+          <a id="exWallet" class="btn ghost sm" href="#" target="_blank" rel="noopener">View on explorer ↗</a>
         </div>
       </div>
 
@@ -92,57 +97,101 @@
         <div class="input-wrap">
           <span class="input-ico" aria-hidden="true">0x</span>
           <input id="wallet" type="text" spellcheck="false" autocomplete="off"
-            placeholder="paste wallet address" aria-label="wallet address" />
+            placeholder="paste your wallet address" aria-label="wallet address" />
         </div>
-        <button type="submit" class="btn primary">Track</button>
-        <button type="button" class="btn ghost" id="add" title="Save bookmark">★</button>
-        <button type="button" class="btn ghost" id="reset">Default</button>
+        <button type="submit" class="btn primary">Check bag</button>
+        <button type="button" class="btn ghost" id="add" title="Save this wallet">★</button>
+        <button type="button" class="btn ghost" id="reset">Reset</button>
       </form>
       <div id="werr" class="errbox" hidden></div>
-      <div id="chips" class="chips" aria-label="bookmarks"></div>
+      <div id="chips" class="chips" aria-label="saved wallets"></div>
 
       <div class="hold-grid">
         <div class="hold-main">
-          <div class="label">FEFER balance</div>
+          <div class="label">FEFER you hold</div>
           <div id="fefer" class="mid">—</div>
           <div class="pct-bar" aria-hidden="true"><i id="pctBar"></i></div>
           <div class="meta tight">
-            <span id="value" class="value-pill">value —</span>
-            <span id="pct" class="chip soft">— % supply</span>
+            <span id="value" class="value-pill">≈ — USDT</span>
+            <span id="pct" class="chip soft">— of supply</span>
           </div>
         </div>
         <div class="mini-cards">
-          <div class="card flat"><div class="label">WgUSDT</div><div id="wgusdt" class="num">—</div></div>
-          <div class="card flat"><div class="label">Native</div><div id="native" class="num">—</div></div>
-          <div class="card flat"><div class="label">Hold block</div><div id="hBlock" class="num">—</div></div>
+          <div class="card flat">
+            <div class="label">USDT in wallet</div>
+            <div id="wgusdt" class="num">—</div>
+          </div>
+          <div class="card flat">
+            <div class="label">Gas coin</div>
+            <div id="native" class="num">—</div>
+          </div>
+          <div class="card flat">
+            <div class="label">Last check</div>
+            <div id="hBlock" class="num">—</div>
+          </div>
         </div>
       </div>
       <code id="addr" class="addr" title="Click to copy">—</code>
     </section>
 
-    <section class="card links">
+    <!-- 3) MARKET (secondary) -->
+    <section class="market secondary">
+      <div class="sec-head">
+        <div class="label">Market snapshot</div>
+        <span class="hint">from the FEFER / USDT pool</span>
+      </div>
+      <div class="cards">
+        <div class="card metric">
+          <div class="metric-ico" aria-hidden="true">◈</div>
+          <div class="label">USDT in pool</div>
+          <div id="r0" class="num">—</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-ico" aria-hidden="true">◇</div>
+          <div class="label">FEFER in pool</div>
+          <div id="r1" class="num">—</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-ico" aria-hidden="true">◎</div>
+          <div class="label">Market cap</div>
+          <div id="fdv" class="num">—</div>
+          <div class="sublabel">if 1B supply</div>
+        </div>
+        <div class="card metric">
+          <div class="metric-ico" aria-hidden="true">≋</div>
+          <div class="label">Liquidity ~</div>
+          <div id="liq" class="num">—</div>
+          <div class="sublabel">USDT side × 2</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4) LINKS (quiet) -->
+    <section class="card links quiet">
       <div class="links-head">
-        <div class="label">Open tools</div>
-        <span class="hint">external · new tab</span>
+        <div class="label">Useful links</div>
       </div>
       <div class="row links-row">
-        <a id="exPair" class="link-pill" href="#" target="_blank" rel="noopener"><span>Pair</span><i>↗</i></a>
+        <a id="exPair" class="link-pill" href="#" target="_blank" rel="noopener"><span>Pool</span><i>↗</i></a>
         <a id="exToken" class="link-pill" href="#" target="_blank" rel="noopener"><span>Token</span><i>↗</i></a>
-        <a id="dyor" class="link-pill" href="#" target="_blank" rel="noopener"><span>DYOR</span><i>↗</i></a>
-        <a id="bridge" class="link-pill accent" href="#" target="_blank" rel="noopener"><span>Bridge · Stargate</span><i>↗</i></a>
+        <a id="dyor" class="link-pill" href="#" target="_blank" rel="noopener"><span>Trade / DYOR</span><i>↗</i></a>
+        <a id="bridge" class="link-pill accent" href="#" target="_blank" rel="noopener"><span>Bridge USDT in</span><i>↗</i></a>
       </div>
-      <code id="pairCode" class="addr">pair —</code>
+      <code id="pairCode" class="addr">pool —</code>
     </section>
 
     <footer>
       <div class="foot-row">
-        <span>Public RPC only</span>
+        <span>Read-only · public data</span>
         <span class="sep">·</span>
-        <span>bookmarks stay in this browser</span>
+        <span>saved wallets stay on this device</span>
         <span class="sep">·</span>
         <span>not financial advice</span>
       </div>
-      <div class="foot-row muted">quote = WgUSDT on-chain reserves ≠ USD oracle</div>
+      <div class="foot-row muted">
+        USDT here = on-chain pool quote · not a bank USD feed ·
+        chain <span id="chain">988</span> · <span id="mode">—</span>
+      </div>
     </footer>
   </div>
   <script src="app.js"></script>

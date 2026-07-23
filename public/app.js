@@ -297,9 +297,11 @@
     $("exToken").href = base + "/token/" + token;
     $("dyor").href = cfg.dyorUrl || FALLBACK.dyorUrl;
     $("bridge").href = cfg.bridgeUrl || FALLBACK.bridgeUrl;
-    $("pairCode").textContent = "pair " + pair;
+    $("pairCode").textContent = "pool " + pair;
     $("chain").textContent = String(cfg.chainId || 988);
-    $("mode").textContent = cfg.mode === "api" ? "Deno API" : "browser RPC";
+    $("mode").textContent = cfg.mode === "api" ? "server" : "direct";
+    const holders = $("stripHolders");
+    if (holders) holders.href = base + "/token/" + token + "#holders";
   }
 
   function bindWalletUI() {
@@ -314,7 +316,7 @@
     const el = $("chips");
     el.innerHTML = "";
     if (!books.length) {
-      el.innerHTML = '<span class="muted tiny">No bookmarks yet · Track then ★</span>';
+      el.innerHTML = '<span class="muted tiny">No saved wallets yet · Check bag then ★</span>';
       return;
     }
     books.forEach((b) => {
@@ -370,18 +372,18 @@
     const el = $("delta");
     if (!el) return;
     if (basePrice == null || !Number.isFinite(basePrice) || basePrice === 0) {
-      el.textContent = "session · —";
+      el.textContent = "since open · —";
       el.className = "delta flat";
       return;
     }
     const pct = ((price - basePrice) / basePrice) * 100;
     if (!Number.isFinite(pct) || Math.abs(pct) < 1e-9) {
-      el.textContent = "session · 0.00%";
+      el.textContent = "since open · 0.00%";
       el.className = "delta flat";
       return;
     }
     const sign = pct > 0 ? "+" : "";
-    el.textContent = "session · " + sign + pct.toFixed(2) + "%";
+    el.textContent = "since open · " + sign + pct.toFixed(2) + "%";
     el.className = "delta " + (pct > 0.0005 ? "up" : pct < -0.0005 ? "down" : "flat");
   }
 
@@ -404,23 +406,29 @@
     hist.push(d.price);
     if (hist.length > 90) hist.shift();
     $("price").textContent = fmt(d.price, 8);
-    $("inv").textContent = fmt(d.inverse ?? 1 / d.price, 2) + " FEFER / WgUSDT";
+    $("inv").textContent = fmt(d.inverse ?? 1 / d.price, 2) + " FEFER per 1 USDT";
     $("r0").textContent = fmt(d.reserveQuote, 2);
     $("r1").textContent = fmt(d.reserveToken, 2);
     $("fdv").textContent = fmt(d.fdv, 2);
     $("liq").textContent = fmt(d.liqApprox, 2);
-    $("block").textContent = "block " + d.block;
+    const sf = $("stripFdv");
+    const sl = $("stripLiq");
+    const sr = $("stripR0");
+    if (sf) sf.textContent = fmt(d.fdv, 2);
+    if (sl) sl.textContent = fmt(d.liqApprox, 2);
+    if (sr) sr.textContent = fmt(d.reserveQuote, 2);
+    $("block").textContent = "updated · #" + d.block;
     paintDelta(d.price);
     draw();
   }
 
   function paintHold(d) {
     $("fefer").textContent = fmt(d.fefer, 4);
-    $("value").textContent = "value " + fmt(d.value, 4) + " WgUSDT";
-    $("pct").textContent = fmt(d.pctSupply, 6) + "% supply";
+    $("value").textContent = "≈ " + fmt(d.value, 4) + " USDT";
+    $("pct").textContent = fmt(d.pctSupply, 6) + "% of supply";
     $("wgusdt").textContent = fmt(d.wgusdt, 4);
     $("native").textContent = fmt(d.native, 6);
-    $("hBlock").textContent = String(d.block);
+    $("hBlock").textContent = "#" + d.block;
     if (d.explorer) $("exWallet").href = d.explorer;
     const bar = $("pctBar");
     if (bar) {
@@ -454,12 +462,12 @@
         bindStaticLinks();
         bindWalletUI();
       }
-      setStatus(null, "sync");
+      setStatus(null, "updating…");
       await Promise.all([tickPrice(), tickHold()]);
       $("age").textContent = new Date().toLocaleTimeString();
       setStatus(true, "live");
     } catch (e) {
-      setStatus(false, "err");
+      setStatus(false, "offline");
       console.error(e);
     }
   }
@@ -470,7 +478,7 @@
     const err = $("werr");
     if (!valid(v)) {
       err.hidden = false;
-      err.textContent = "Address invalid. Format: 0x + 40 hex.";
+      err.textContent = "That doesn’t look like a wallet. Need 0x + 40 characters.";
       return;
     }
     err.hidden = true;
@@ -482,7 +490,7 @@
     const err = $("werr");
     if (!valid(v)) {
       err.hidden = false;
-      err.textContent = "Address invalid. Format: 0x + 40 hex.";
+      err.textContent = "That doesn’t look like a wallet. Need 0x + 40 characters.";
       return;
     }
     err.hidden = true;
