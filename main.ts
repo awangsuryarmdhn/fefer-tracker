@@ -22,11 +22,29 @@ const PRICE_MS = Number(Deno.env.get("PRICE_CACHE_MS") ?? "3500");
 const HOLD_MS = Number(Deno.env.get("HOLD_CACHE_MS") ?? "3000");
 const RPC_TIMEOUT = Number(Deno.env.get("RPC_TIMEOUT_MS") ?? "8000");
 
-// ponytail: in-mem cache; shared store if multi-isolate cold starts hurt
+// mem = per-isolate fast path. KV = shared price only (Deploy multi-isolate).
+// hold stays mem — per-wallet KV writes burn ops, not worth it.
 let priceCache: { at: number; data: PriceData } | null = null;
 const holdCache = new Map<string, { at: number; data: HoldData }>();
 let rpcCursor = 0;
 let lastRpcHost = "";
+const USE_KV = (Deno.env.get("USE_KV") ?? "1") !== "0";
+const KV_PRICE_KEY = ["fefer", "price", PAIR] as const;
+let kv: Deno.Kv | null = null;
+let kvTried = false;
+
+async function openKv(): Promise<Deno.Kv | null> {
+  if (!USE_KV) return null;
+  if (kvTried) return kv;
+  kvTried = true;
+  try {
+    // Deploy: auto when DB assigned. Local: works with openKv() or omit.
+    kv = await Deno.openKv();
+  } catch {
+    kv = null;
+  }
+  return kv;
+}
 
 type PriceData = {
   ok: true;
@@ -163,8 +181,27 @@ async function fetchPrice(): Promise<PriceData> {
 async function getPrice() {
   const now = Date.now();
   if (priceCache && now - priceCache.at < PRICE_MS) return priceCache.data;
+
+  // shared across isolates (Deploy) — 1 key only, not per-wallet
+  const store = await openKv();
+  if (store) {
+    try {
+      const hit = await store.get<{ at: number; data: PriceData }>([...KV_PRICE_KEY]);
+      if (hit.value && now - hit.value.at < PRICE_MS) {
+        priceCache = hit.value;
+        return hit.value.data;
+      }
+    } catch {
+      /* fall through to RPC */
+    }
+  }
+
   const data = await fetchPrice();
   priceCache = { at: now, data };
+  if (store) {
+    // fire-and-forget; expire slightly after PRICE_MS
+    store.set([...KV_PRICE_KEY], priceCache, { expireIn: PRICE_MS + 2000 }).catch(() => {});
+  }
   return data;
 }
 
@@ -198,7 +235,12 @@ async function fetchHolding(wallet: string): Promise<HoldData> {
     natHex = res[2];
   } else {
     price = parseReserves(res[0], res[1]);
-    priceCache = { at: Date.now(), data: price };
+    const at = Date.now();
+    priceCache = { at, data: price };
+    const store = await openKv();
+    if (store) {
+      store.set([...KV_PRICE_KEY], priceCache, { expireIn: PRICE_MS + 2000 }).catch(() => {});
+    }
     feferHex = res[2];
     wguHex = res[3];
     natHex = res[4];
@@ -249,6 +291,7 @@ async function getSnapshot(wallet: string) {
       rpcs: RPCS.length,
       priceCacheMs: PRICE_MS,
       holdCacheMs: HOLD_MS,
+      kv: USE_KV,
     },
   };
 }
@@ -327,7 +370,7 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
         explorer: EXPLORER,
         rpcs: RPCS.length,
         rpcHost: lastRpcHost || null,
-        cache: { priceMs: PRICE_MS, holdMs: HOLD_MS },
+        cache: { priceMs: PRICE_MS, holdMs: HOLD_MS, kv: USE_KV },
       });
     }
     if (pathname === "/api/config") {
