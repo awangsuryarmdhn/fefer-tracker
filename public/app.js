@@ -17,6 +17,7 @@
   };
   const LS_ACTIVE = "fefer.active";
   const LS_BOOK = "fefer.bookmarks";
+  const LS_CURRENCY = "fefer.currency";
   const MAX_BOOK = 10;
   let lastPrice = null;
   let basePrice = null;
@@ -26,6 +27,10 @@
   let pollMs = FALLBACK.pollMs;
   let timer = 0;
   let inflight = null;
+  let currentCurrency = "USDT";
+  let lastIdr = { rate: 16200, source: "fallback" };
+  let lastPriceData = null;
+  let lastHoldData = null;
   const $ = (id) => document.getElementById(id);
 
   function fmt(n, d = 6) {
@@ -87,6 +92,50 @@
       }
     } catch {}
     return (cfg.defaultWallet || FALLBACK.defaultWallet).toLowerCase();
+  }
+
+  function loadCurrency() {
+    try {
+      const q = new URLSearchParams(location.search).get("currency");
+      if (q) {
+        const u = q.toUpperCase();
+        if (u === "IDR" || u === "USDT") return u;
+      }
+      const s = localStorage.getItem(LS_CURRENCY);
+      if (s === "IDR" || s === "USDT") return s;
+    } catch {}
+    return "USDT";
+  }
+
+  function setCurrency(c) {
+    currentCurrency = (c === "IDR") ? "IDR" : "USDT";
+    try { localStorage.setItem(LS_CURRENCY, currentCurrency); } catch {}
+    updateCurrencyUI();
+    if (lastHoldData) paintHold(lastHoldData);
+    if (lastPriceData) paintPrice(lastPriceData);
+    updateRateHint();
+  }
+
+  function updateCurrencyUI() {
+    const seg = $("curSeg");
+    if (seg) {
+      seg.querySelectorAll(".seg-btn").forEach((b) => {
+        b.classList.toggle("on", b.dataset.cur === currentCurrency);
+      });
+    }
+  }
+
+  function updateRateHint() {
+    const el = $("rateHint");
+    if (!el) return;
+    const r = lastIdr && lastIdr.rate ? lastIdr.rate : 16200;
+    const src = (lastIdr && lastIdr.source) || "—";
+    el.textContent = "1 USDT ≈ Rp " + Math.round(r).toLocaleString("id-ID") + " · via " + src;
+  }
+
+  function toDisplayValue(usdtVal) {
+    if (!Number.isFinite(usdtVal)) return usdtVal;
+    return currentCurrency === "IDR" ? usdtVal * (lastIdr.rate || 16200) : usdtVal;
   }
 
   async function loadConfig() {
@@ -344,6 +393,7 @@
   }
 
   function paintPrice(d) {
+    lastPriceData = d;
     if (basePrice == null && Number.isFinite(d.price)) basePrice = d.price;
     if (lastPrice != null && Number.isFinite(d.price) && d.price !== lastPrice) {
       flashPrice(d.price > lastPrice ? "up" : "down");
@@ -366,8 +416,10 @@
   }
 
   function paintHold(d) {
+    lastHoldData = d;
     $("fefer").textContent = fmt(d.fefer, 4);
-    $("value").textContent = fmt(d.value, 4);
+    const v = toDisplayValue(d.value);
+    $("value").textContent = fmt(v, currentCurrency === "IDR" ? 0 : 4);
     $("pct").textContent = fmt(d.pctSupply, 6) + "% of supply";
     $("wgusdt").textContent = fmt(d.wgusdt, 4);
     $("native").textContent = fmt(d.native, 6);
@@ -395,17 +447,24 @@
           cfg = await loadConfig();
           books = loadBookmarks();
           wallet = resolveWallet(cfg);
+          currentCurrency = loadCurrency();
           pollMs = Number(cfg.pollMs) || FALLBACK.pollMs;
           setActive(wallet);
           bindStaticLinks();
           bindWalletUI();
           armChartLazy();
+          updateCurrencyUI();
+          updateRateHint();
         }
         if (document.hidden && !force) return;
         setStatus(null, "updating…");
         const snap = await fetchSnapshot(wallet);
+        lastPriceData = snap.price;
+        lastHoldData = snap.holding;
+        if (snap.idr) lastIdr = snap.idr;
         paintPrice(snap.price);
         paintHold(snap.holding);
+        updateRateHint();
         $("age").textContent = new Date().toLocaleTimeString();
         if (snap.engine && snap.engine.host) {
           $("mode").textContent = "rpc·" + snap.engine.host;
@@ -461,6 +520,13 @@
     history.replaceState(null, "", u);
     selectWallet(d);
   });
+
+  const seg = $("curSeg");
+  if (seg) {
+    seg.querySelectorAll(".seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => setCurrency(btn.dataset.cur));
+    });
+  }
 
   $("copy").addEventListener("click", () => copyText(wallet, $("copy")));
   $("addr").addEventListener("click", () => copyText(wallet, $("addr")));

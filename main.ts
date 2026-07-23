@@ -20,14 +20,25 @@ const TRADE_BOT_URL = Deno.env.get("TRADE_BOT_URL") ??
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
 const SUPPLY = 1e9;
 const PUBLIC = new URL("./public/", import.meta.url);
-const PRICE_MS = Number(Deno.env.get("PRICE_CACHE_MS") ?? "3500");
-const HOLD_MS = Number(Deno.env.get("HOLD_CACHE_MS") ?? "3000");
+const PRICE_MS = Number(Deno.env.get("PRICE_CACHE_MS") ?? "4000");
+const HOLD_MS = Number(Deno.env.get("HOLD_CACHE_MS") ?? "3500");
+const IDR_MS = Number(Deno.env.get("IDR_CACHE_MS") ?? "600000"); // 10m — CG/Frankfurter slow
 const RPC_TIMEOUT = Number(Deno.env.get("RPC_TIMEOUT_MS") ?? "8000");
+const IDR_FALLBACK = Number(Deno.env.get("IDR_FALLBACK") ?? "16200");
+const FX_URL = Deno.env.get("FX_URL") ??
+  "https://api.frankfurter.app/latest?from=USD&to=IDR";
+const CG_URL = Deno.env.get("CG_URL") ??
+  "https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=idr";
 
 // mem = per-isolate fast path. KV = shared price only (Deploy multi-isolate).
 // hold stays mem — per-wallet KV writes burn ops, not worth it.
 let priceCache: { at: number; data: PriceData } | null = null;
 const holdCache = new Map<string, { at: number; data: HoldData }>();
+let idrCache: { at: number; rate: number; source: string } | null = null;
+// singleflight — concurrent polls share one RPC/FX/CG round-trip
+let priceInflight: Promise<PriceData> | null = null;
+const holdInflight = new Map<string, Promise<HoldData>>();
+let idrInflight: Promise<{ rate: number; source: string }> | null = null;
 let rpcCursor = 0;
 let lastRpcHost = "";
 const USE_KV = (Deno.env.get("USE_KV") ?? "1") !== "0";
@@ -180,31 +191,92 @@ async function fetchPrice(): Promise<PriceData> {
   return parseReserves(resHex, blockHex);
 }
 
+/** IDR rate: CoinGecko tether/idr primary (stable) → Frankfurter → static. 10m cache. */
+async function getIdrRate(): Promise<{ rate: number; source: string }> {
+  const now = Date.now();
+  if (idrCache && now - idrCache.at < IDR_MS) return { rate: idrCache.rate, source: idrCache.source };
+  if (idrInflight) return idrInflight;
+
+  idrInflight = (async () => {
+    // 1) CoinGecko — USDT/IDR market rate
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 4000);
+      try {
+        const r = await fetch(CG_URL, { signal: ac.signal, headers: { accept: "application/json" } });
+        if (r.ok) {
+          const j = await r.json() as { tether?: { idr?: number } };
+          const rate = Number(j?.tether?.idr);
+          if (rate > 1000 && rate < 100000) {
+            idrCache = { at: Date.now(), rate, source: "coingecko" };
+            return { rate, source: "coingecko" };
+          }
+        }
+      } finally {
+        clearTimeout(t);
+      }
+    } catch {}
+
+    // 2) Frankfurter USD→IDR fallback
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), 4000);
+      try {
+        const r = await fetch(FX_URL, { signal: ac.signal, headers: { accept: "application/json" } });
+        if (r.ok) {
+          const j = await r.json() as { rates?: { IDR?: number } };
+          const rate = Number(j?.rates?.IDR);
+          if (rate > 1000 && rate < 100000) {
+            idrCache = { at: Date.now(), rate, source: "frankfurter" };
+            return { rate, source: "frankfurter" };
+          }
+        }
+      } finally {
+        clearTimeout(t);
+      }
+    } catch {}
+
+    // 3) static
+    const rate = IDR_FALLBACK;
+    idrCache = { at: Date.now(), rate, source: "fallback" };
+    return { rate, source: "fallback" };
+  })();
+  return idrInflight;
+}
+
 async function getPrice() {
   const now = Date.now();
   if (priceCache && now - priceCache.at < PRICE_MS) return priceCache.data;
+  if (priceInflight) return priceInflight;
 
-  // shared across isolates (Deploy) — 1 key only, not per-wallet
-  const store = await openKv();
-  if (store) {
+  priceInflight = (async () => {
     try {
-      const hit = await store.get<{ at: number; data: PriceData }>([...KV_PRICE_KEY]);
-      if (hit.value && now - hit.value.at < PRICE_MS) {
-        priceCache = hit.value;
-        return hit.value.data;
+      // shared across isolates (Deploy) — 1 key only, not per-wallet
+      const store = await openKv();
+      if (store) {
+        try {
+          const hit = await store.get<{ at: number; data: PriceData }>([...KV_PRICE_KEY]);
+          if (hit.value && Date.now() - hit.value.at < PRICE_MS) {
+            priceCache = hit.value;
+            return hit.value.data;
+          }
+        } catch {
+          /* fall through to RPC */
+        }
       }
-    } catch {
-      /* fall through to RPC */
-    }
-  }
 
-  const data = await fetchPrice();
-  priceCache = { at: now, data };
-  if (store) {
-    // fire-and-forget; expire slightly after PRICE_MS
-    store.set([...KV_PRICE_KEY], priceCache, { expireIn: PRICE_MS + 2000 }).catch(() => {});
-  }
-  return data;
+      const data = await fetchPrice();
+      const at = Date.now();
+      priceCache = { at, data };
+      if (store) {
+        store.set([...KV_PRICE_KEY], priceCache, { expireIn: PRICE_MS + 2000 }).catch(() => {});
+      }
+      return data;
+    } finally {
+      priceInflight = null;
+    }
+  })();
+  return priceInflight;
 }
 
 async function fetchHolding(wallet: string): Promise<HoldData> {
@@ -280,14 +352,16 @@ async function getHolding(wallet: string) {
   return data;
 }
 
-/** One payload for UI — client = 1 HTTP */
+/** One payload for UI — client = 1 HTTP. Adds idr for USD/IDR toggle. */
 async function getSnapshot(wallet: string) {
   const hold = await getHolding(wallet);
   const price = priceCache?.data ?? await getPrice();
+  const idr = await getIdrRate();
   return {
     ok: true as const,
     price,
     holding: hold,
+    idr,
     engine: {
       host: lastRpcHost || null,
       rpcs: RPCS.length,
