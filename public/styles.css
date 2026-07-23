@@ -118,30 +118,22 @@ a{color:var(--mint);text-decoration:none}
 .accent-usdt{color:var(--mint)!important;font-weight:740}
 
 /* Buy / Sell — primary CTA (Telegram BasedBot) */
-.trade-cta{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin:0 0 .85rem}
-.cta{display:flex;align-items:center;gap:.65rem;min-height:3.1rem;padding:.65rem .85rem;
+.trade-cta{display:grid;grid-template-columns:1fr;margin:0 0 .85rem}
+.cta{display:flex;align-items:center;justify-content:center;gap:.7rem;min-height:3.15rem;padding:.7rem 1rem;
   border-radius:14px;border:1px solid transparent;text-decoration:none;color:inherit;
   transition:transform .12s,filter .15s,box-shadow .15s,border-color .15s}
 .cta:active{transform:translateY(1px)}
-.cta-ico{display:inline-grid;place-items:center;width:1.7rem;height:1.7rem;border-radius:9px;
-  font-size:.72rem;font-weight:800;flex-shrink:0;line-height:1}
+.cta-ico{display:inline-grid;place-items:center;width:1.75rem;height:1.75rem;border-radius:9px;
+  font-size:.85rem;font-weight:800;flex-shrink:0;line-height:1}
 .cta-copy{display:flex;flex-direction:column;gap:.05rem;min-width:0;line-height:1.15}
-.cta-copy strong{font-size:.98rem;font-weight:780;letter-spacing:.01em}
+.cta-copy strong{font-size:.98rem;font-weight:800;letter-spacing:.04em}
 .cta-copy em{font-style:normal;font-size:.68rem;font-weight:600;letter-spacing:.04em;
   text-transform:uppercase;opacity:.72}
-.cta-buy{color:#04110b;border-color:rgba(126,224,168,.35);
+.cta-bot{color:#04110b;border-color:rgba(126,224,168,.35);
   background:linear-gradient(145deg,#7ee0a8 0%,#5fb88a 55%,#4aa876 100%);
   box-shadow:0 8px 22px rgba(95,184,138,.28),0 0 0 1px rgba(255,255,255,.06) inset}
-.cta-buy .cta-ico{background:rgba(4,17,11,.14);color:#04110b}
-.cta-buy:hover{filter:brightness(1.05);box-shadow:0 10px 26px rgba(95,184,138,.36)}
-.cta-sell{color:var(--text);border-color:rgba(244,180,196,.4);
-  background:linear-gradient(145deg,rgba(244,180,196,.18),rgba(18,12,14,.92) 55%,rgba(12,10,12,.98));
-  box-shadow:0 8px 22px rgba(0,0,0,.28),0 0 0 1px rgba(244,180,196,.08) inset}
-.cta-sell .cta-ico{background:rgba(244,180,196,.16);color:var(--sakura)}
-.cta-sell .cta-copy strong{color:var(--sakura)}
-.cta-sell .cta-copy em{color:var(--muted)}
-.cta-sell:hover{filter:brightness(1.06);border-color:rgba(244,180,196,.55);
-  box-shadow:0 10px 26px rgba(224,122,122,.14)}
+.cta-bot .cta-ico{background:rgba(4,17,11,.14);color:#04110b}
+.cta-bot:hover{filter:brightness(1.05);box-shadow:0 10px 26px rgba(95,184,138,.36)}
 
 .track-row{display:flex;flex-wrap:wrap;gap:.45rem;align-items:stretch}
 .input-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:.3rem;

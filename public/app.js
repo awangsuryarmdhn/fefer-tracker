@@ -170,10 +170,8 @@
     $("dyor").href = cfg.dyorUrl || FALLBACK.dyorUrl;
     $("bridge").href = cfg.bridgeUrl || FALLBACK.bridgeUrl;
     const tg = cfg.tradeBotUrl || FALLBACK.tradeBotUrl;
-    ["tgBuy", "tgSell", "tgTrade"].forEach((id) => {
-      const el = $(id);
-      if (el) el.href = tg;
-    });
+    const el = $("tgTrade");
+    if (el) el.href = tg;
     $("pairCode").textContent = "pool " + pair;
     $("chain").textContent = String(cfg.chainId || 988);
     $("mode").textContent = "server";
