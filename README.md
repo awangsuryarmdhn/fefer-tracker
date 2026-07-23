@@ -5,6 +5,7 @@ Public **read-only** FEFER tracker — live price + wallet watch on chain **988*
 - No wallet connect · paste any `0x…`
 - Bookmarks in browser `localStorage` only (max 10)
 - Price from pair reserves (on-chain, not an oracle)
+- Portfolio value toggle: **USDT / IDR** (CoinGecko USDT/IDR primary + fallbacks)
 - Links: Stablescan · DYOR · Stargate bridge
 
 | | |
@@ -68,13 +69,22 @@ Docs: https://docs.deno.com/deploy/classic/environment-variables/
 ## API
 
 | Path | |
-|---|---|
+|---|
 | `GET /health` | liveness |
 | `GET /api/config` | public config (explorer, bridge, dyor) |
 | `GET /api/price` | live price from reserves (~4s cache) |
 | `GET /api/holding?wallet=0x…` | balances + value |
+| `GET /api/snapshot?wallet=0x…` | price + holding + `idr: {rate, source}` |
 
 Static fallback: serve `public/` alone — browser hits RPC direct if `/api/*` missing (CORS `*`).
+
+## Currency toggle (USDT / IDR)
+
+- Portfolio "Worth right now" switches between USDT and IDR.
+- Rate: CoinGecko `tether/idr` (primary) → Frankfurter USD→IDR → static fallback.
+- 10 min cache. Source shown under value: `via coingecko | frankfurter | fallback`.
+- Persisted: `localStorage` key `fefer.currency` + `?currency=IDR` query param.
+- No server session. Switch is display-only.
 
 ## Client bookmarks
 
