@@ -16,7 +16,6 @@
   const LS_ACTIVE = "fefer.active";
   const LS_BOOK = "fefer.bookmarks";
   const MAX_BOOK = 10;
-  const hist = [];
   let lastPrice = null;
   let basePrice = null;
   let flashTimer = 0;
@@ -168,72 +167,6 @@
       block: parseInt(blockHex, 16),
       explorer: base + "/address/" + wallet,
     };
-  }
-
-  function draw() {
-    const c = $("spark");
-    if (!c || hist.length < 2) return;
-    const ctx = c.getContext("2d");
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const cssW = c.clientWidth || 820;
-    const cssH = c.clientHeight || 110;
-    if (c.width !== Math.floor(cssW * dpr) || c.height !== Math.floor(cssH * dpr)) {
-      c.width = Math.floor(cssW * dpr);
-      c.height = Math.floor(cssH * dpr);
-    }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.scale(dpr, dpr);
-    const W = cssW;
-    const H = cssH;
-    const min = Math.min(...hist);
-    const max = Math.max(...hist);
-    const span = max - min || 1;
-    const padX = 6;
-    const padY = 10;
-    const pts = hist.map((v, i) => ({
-      x: padX + (i / (hist.length - 1)) * (W - padX * 2),
-      y: H - padY - ((v - min) / span) * (H - padY * 2),
-    }));
-    const last = pts[pts.length - 1];
-    const first = pts[0];
-    const up = hist[hist.length - 1] >= hist[0];
-    const stroke = up ? "#9ad9b6" : "#f0a0a8";
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, up ? "rgba(154,217,182,.30)" : "rgba(240,160,168,.26)");
-    g.addColorStop(1, "rgba(0,0,0,0)");
-
-    ctx.beginPath();
-    ctx.moveTo(padX, H * 0.5);
-    ctx.lineTo(W - padX, H * 0.5);
-    ctx.strokeStyle = "rgba(154,217,182,.08)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.beginPath();
-    pts.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 2.2;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.stroke();
-    ctx.lineTo(last.x, H);
-    ctx.lineTo(first.x, H);
-    ctx.closePath();
-    ctx.fillStyle = g;
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
-    ctx.fillStyle = stroke;
-    ctx.shadowColor = stroke;
-    ctx.shadowBlur = 12;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 2, 0, Math.PI * 2);
-    ctx.fillStyle = "#0a0f12";
-    ctx.fill();
   }
 
   function setStatus(ok, msg) {
@@ -403,8 +336,6 @@
       flashPrice(d.price > lastPrice ? "up" : "down");
     }
     lastPrice = d.price;
-    hist.push(d.price);
-    if (hist.length > 90) hist.shift();
     $("price").textContent = fmt(d.price, 8);
     $("inv").textContent = fmt(d.inverse ?? 1 / d.price, 2) + " FEFER per 1 USDT";
     $("r0").textContent = fmt(d.reserveQuote, 2);
@@ -419,12 +350,11 @@
     if (sr) sr.textContent = fmt(d.reserveQuote, 2);
     $("block").textContent = "updated · #" + d.block;
     paintDelta(d.price);
-    draw();
   }
 
   function paintHold(d) {
     $("fefer").textContent = fmt(d.fefer, 4);
-    $("value").textContent = "≈ " + fmt(d.value, 4) + " USDT";
+    $("value").textContent = fmt(d.value, 4);
     $("pct").textContent = fmt(d.pctSupply, 6) + "% of supply";
     $("wgusdt").textContent = fmt(d.wgusdt, 4);
     $("native").textContent = fmt(d.native, 6);
@@ -514,14 +444,6 @@
   $("pairCode").addEventListener("click", () => {
     const pair = (cfg && cfg.pair) || FALLBACK.pair;
     copyText(pair, $("pairCode"));
-  });
-
-  let resizeT;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeT);
-    resizeT = setTimeout(() => {
-      if (hist.length >= 2) draw();
-    }, 120);
   });
 
   tick();

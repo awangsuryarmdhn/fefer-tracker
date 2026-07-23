@@ -20,7 +20,8 @@
     <header class="top">
       <div class="brand">
         <div class="brand-row">
-          <span class="mark" aria-hidden="true"><span class="mark-core"></span></span>
+          <img class="brand-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="40" height="40" loading="eager" onerror="this.style.display='none';var m=this.nextElementSibling;if(m)m.style.display='inline-grid'" />
+          <span class="mark" aria-hidden="true" style="display:none"><span class="mark-core"></span></span>
           <div>
             <h1>FEFER</h1>
             <p>Price & your assets · live · no wallet connect</p>
@@ -74,8 +75,20 @@
           </div>
         </div>
       </div>
-      <div class="spark-wrap">
-        <canvas id="spark" width="820" height="110" aria-label="price chart"></canvas>
+      <div class="chart-wrap">
+        <div class="chart-bar">
+          <span class="label">Live candle chart</span>
+          <a class="btn ghost sm" href="https://feferstable.vercel.app/" target="_blank" rel="noopener">Open full chart ↗</a>
+        </div>
+        <iframe
+          id="feferChart"
+          class="chart-frame"
+          src="https://feferstable.vercel.app/"
+          title="FEFER / gUSDT candlestick chart"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+          allow="clipboard-write"
+        ></iframe>
       </div>
     </section>
 
@@ -108,18 +121,31 @@
 
       <div class="hold-grid">
         <div class="hold-main">
-          <div class="label">FEFER you hold</div>
-          <div id="fefer" class="mid">—</div>
-          <div class="pct-bar" aria-hidden="true"><i id="pctBar"></i></div>
-          <div class="meta tight">
-            <span id="value" class="value-pill">≈ — USDT</span>
-            <span id="pct" class="chip soft">— of supply</span>
+          <div class="value-hero" aria-label="bag value in USDT">
+            <div class="value-hero-top">
+              <img class="token-logo sm" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="40" height="40" loading="lazy" onerror="this.style.display='none'" />
+              <div class="label">Worth in USDT</div>
+            </div>
+            <div class="value-row">
+              <div id="value" class="value-big">—</div>
+              <span class="unit-badge">USDT</span>
+            </div>
+            <div class="fefer-line">
+              <img class="asset-ico" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="18" height="18" loading="lazy" onerror="this.style.display='none'" />
+              <span id="fefer" class="fefer-amt mono">—</span>
+              <span class="muted tiny">FEFER</span>
+              <span id="pct" class="chip soft">— of supply</span>
+            </div>
+            <div class="pct-bar fat" aria-hidden="true"><i id="pctBar"></i></div>
           </div>
         </div>
         <div class="mini-cards">
-          <div class="card flat">
+          <div class="card flat mini-usdt">
             <div class="label">USDT in wallet</div>
-            <div id="wgusdt" class="num">—</div>
+            <div class="num-row">
+              <div id="wgusdt" class="num accent-usdt">—</div>
+              <span class="unit-sm">USDT</span>
+            </div>
           </div>
           <div class="card flat">
             <div class="label">Gas coin</div>
