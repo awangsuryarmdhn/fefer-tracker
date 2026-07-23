@@ -16,9 +16,12 @@
   const LS_ACTIVE = "fefer.active";
   const LS_BOOK = "fefer.bookmarks";
   const MAX_BOOK = 10;
+  const CHART_BASE = "https://basedbot.app/embed/token/stable/";
   let lastPrice = null;
   let basePrice = null;
   let flashTimer = 0;
+  let chartReady = false;
+  let chartSrc = "";
   const $ = (id) => document.getElementById(id);
 
   function fmt(n, d = 6) {
@@ -237,12 +240,71 @@
     if (holders) holders.href = base + "/token/" + token + "#holders";
   }
 
+  function chartUrl(addr) {
+    const token = ((cfg && cfg.token) || FALLBACK.token).toLowerCase();
+    const w = valid(addr)
+      ? addr.toLowerCase()
+      : ((cfg && cfg.defaultWallet) || FALLBACK.defaultWallet).toLowerCase();
+    return CHART_BASE + token + "?interval=5&wallets=" + encodeURIComponent(w);
+  }
+
+  function syncChart(force) {
+    const frame = $("feferChart");
+    const open = $("chartOpen");
+    if (!frame) return;
+    const src = chartUrl(wallet);
+    if (open) open.href = src;
+    if (!chartReady) return;
+    if (!force && chartSrc === src) return;
+    chartSrc = src;
+    const shell = $("chartShell");
+    if (shell) shell.classList.remove("ready");
+    frame.onload = () => {
+      if (shell) shell.classList.add("ready");
+    };
+    frame.src = src;
+  }
+
+  function armChartLazy() {
+    const frame = $("feferChart");
+    const shell = $("chartShell");
+    if (!frame || chartReady) return;
+    const boot = () => {
+      if (chartReady) return;
+      chartReady = true;
+      syncChart(true);
+    };
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver(
+        (ents) => {
+          if (ents.some((e) => e.isIntersecting)) {
+            io.disconnect();
+            boot();
+          }
+        },
+        { rootMargin: "180px 0px" },
+      );
+      io.observe(shell || frame);
+    } else if ("requestIdleCallback" in window) {
+      requestIdleCallback(boot, { timeout: 2500 });
+    } else {
+      setTimeout(boot, 1200);
+    }
+    // fail-safe: hide skel if load hangs
+    setTimeout(() => {
+      if (shell && chartReady && !shell.classList.contains("ready")) {
+        shell.classList.add("ready");
+      }
+    }, 8000);
+  }
+
   function bindWalletUI() {
     const base = (cfg.explorerBase || FALLBACK.explorerBase).replace(/\/$/, "");
     $("exWallet").href = base + "/address/" + wallet;
     $("addr").textContent = wallet;
     $("wallet").value = wallet;
     renderChips();
+    syncChart(false);
   }
 
   function renderChips() {
@@ -391,6 +453,7 @@
         setActive(wallet);
         bindStaticLinks();
         bindWalletUI();
+        armChartLazy();
       }
       setStatus(null, "updating…");
       await Promise.all([tickPrice(), tickHold()]);

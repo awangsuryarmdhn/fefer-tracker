@@ -2,30 +2,26 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#07090c" />
-  <meta name="description" content="FEFER tracker — live price + your bag · simple · read-only" />
-  <title>FEFER · Price & Assets</title>
+  <meta name="description" content="FEFER bag tracker — portfolio first · live price · read-only" />
+  <title>FEFER · Your bag</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="bg" aria-hidden="true">
     <div class="orb orb-a"></div>
     <div class="orb orb-b"></div>
-    <div class="grid"></div>
-    <div class="noise"></div>
   </div>
 
   <div class="wrap">
     <header class="top">
-      <div class="brand">
-        <div class="brand-row">
-          <img class="brand-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="40" height="40" loading="eager" onerror="this.style.display='none';var m=this.nextElementSibling;if(m)m.style.display='inline-grid'" />
-          <span class="mark" aria-hidden="true" style="display:none"><span class="mark-core"></span></span>
-          <div>
-            <h1>FEFER</h1>
-            <p>Price & your assets · live · no wallet connect</p>
-          </div>
+      <div class="brand-row">
+        <img class="brand-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="36" height="36" loading="eager" onerror="this.style.display='none';var m=this.nextElementSibling;if(m)m.style.display='inline-grid'" />
+        <span class="mark" aria-hidden="true" style="display:none"><span class="mark-core"></span></span>
+        <div>
+          <h1>FEFER</h1>
+          <p>your bag · live · no connect</p>
         </div>
       </div>
       <div class="top-actions">
@@ -34,192 +30,185 @@
       </div>
     </header>
 
-    <!-- 1) PRICE -->
-    <section class="hero focus">
-      <div class="hero-glow" aria-hidden="true"></div>
-      <div class="section-kicker">Price</div>
-      <div class="hero-main">
+    <!-- 1) PORTFOLIO FIRST -->
+    <section class="bag-hero" id="bag" aria-label="Your portfolio">
+      <div class="bag-kicker">
+        <span class="k-dot" aria-hidden="true"></span>
+        <span>Your bag</span>
+      </div>
+
+      <div class="value-stage">
+        <div class="value-stage-top">
+          <img class="token-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="44" height="44" loading="lazy" onerror="this.style.display='none'" />
+          <div class="value-stage-copy">
+            <div class="label">Worth right now</div>
+            <div class="value-row">
+              <div id="value" class="value-big">—</div>
+              <span class="unit-badge">USDT</span>
+            </div>
+          </div>
+        </div>
+        <div class="fefer-line">
+          <img class="asset-ico" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="18" height="18" loading="lazy" onerror="this.style.display='none'" />
+          <span id="fefer" class="fefer-amt mono">—</span>
+          <span class="muted tiny">FEFER</span>
+          <span id="pct" class="chip soft">— of supply</span>
+        </div>
+        <div class="pct-bar fat" aria-hidden="true"><i id="pctBar"></i></div>
+      </div>
+
+      <div class="mini-row">
+        <div class="mini mini-usdt">
+          <span class="label">Wallet USDT</span>
+          <div class="num-row">
+            <span id="wgusdt" class="num accent-usdt">—</span>
+            <span class="unit-sm">USDT</span>
+          </div>
+        </div>
+        <div class="mini">
+          <span class="label">Gas</span>
+          <span id="native" class="num">—</span>
+        </div>
+        <div class="mini">
+          <span class="label">Block</span>
+          <span id="hBlock" class="num">—</span>
+        </div>
+      </div>
+
+      <form id="form" class="track-row">
+        <div class="input-wrap">
+          <span class="input-ico" aria-hidden="true">0x</span>
+          <input id="wallet" type="text" spellcheck="false" autocomplete="off" enterkeyhint="go"
+            placeholder="paste wallet address" aria-label="wallet address" />
+        </div>
+        <button type="submit" class="btn primary">Check</button>
+        <button type="button" class="btn ghost" id="add" title="Save wallet">★</button>
+        <button type="button" class="btn ghost" id="reset" title="Reset">↺</button>
+      </form>
+      <div id="werr" class="errbox" hidden></div>
+      <div id="chips" class="chips" aria-label="saved wallets"></div>
+
+      <div class="wallet-bar">
+        <code id="addr" class="addr" title="Click to copy">—</code>
+        <div class="wallet-bar-actions">
+          <button type="button" class="btn ghost sm" id="copy">Copy</button>
+          <a id="exWallet" class="btn ghost sm" href="#" target="_blank" rel="noopener">Explorer ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2) PRICE STRIP -->
+    <section class="price-card" aria-label="Live price">
+      <div class="price-card-main">
         <div class="token-head">
-          <img id="tokenLogo" class="token-logo" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="48" height="48" loading="lazy" onerror="this.style.display='none'" />
+          <img id="tokenLogo" class="token-logo sm" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="FEFER" width="36" height="36" loading="lazy" onerror="this.style.display='none'" />
           <div class="token-head-text">
             <div class="label-row">
-              <div class="label">1 FEFER in USDT</div>
+              <div class="label">1 FEFER</div>
               <span id="delta" class="delta flat">—</span>
             </div>
             <div class="price-row">
-              <div id="price" class="big">—</div>
+              <div id="price" class="big sm">—</div>
               <span class="unit">USDT</span>
             </div>
           </div>
         </div>
         <div class="meta">
-          <span id="inv" class="mono muted">— FEFER per 1 USDT</span>
+          <span id="inv" class="mono muted">— FEFER / 1 USDT</span>
           <span id="block" class="chip soft">updated —</span>
         </div>
-        <div class="price-strip" aria-label="market strip">
-          <div>
-            <span class="eyebrow">Market cap</span>
-            <strong id="stripFdv">—</strong>
-          </div>
-          <div>
-            <span class="eyebrow">Liquidity</span>
-            <strong id="stripLiq">—</strong>
-          </div>
-          <div>
-            <span class="eyebrow">USDT in pool</span>
-            <strong id="stripR0">—</strong>
-          </div>
-          <div class="holder-stat">
-            <span class="eyebrow">Holders</span>
-            <a id="stripHolders" class="strip-link" href="#" target="_blank" rel="noopener">VIEW ↗</a>
-          </div>
+      </div>
+      <div class="price-strip" aria-label="market strip">
+        <div>
+          <span class="eyebrow">MCap</span>
+          <strong id="stripFdv">—</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Liq</span>
+          <strong id="stripLiq">—</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Pool USDT</span>
+          <strong id="stripR0">—</strong>
+        </div>
+        <div>
+          <span class="eyebrow">Holders</span>
+          <a id="stripHolders" class="strip-link" href="#" target="_blank" rel="noopener">VIEW ↗</a>
         </div>
       </div>
-      <div class="chart-wrap">
-        <div class="chart-bar">
-          <span class="label">Live candle chart</span>
-          <a class="btn ghost sm" href="https://feferstable.vercel.app/" target="_blank" rel="noopener">Open full chart ↗</a>
-        </div>
+    </section>
+
+    <!-- 3) CHART (BasedBot) -->
+    <section class="chart-wrap" aria-label="Chart">
+      <div class="chart-bar">
+        <span class="label">Live chart · BasedBot</span>
+        <a class="btn ghost sm" id="chartOpen" href="https://basedbot.app/" target="_blank" rel="noopener">Open ↗</a>
+      </div>
+      <div class="chart-shell" id="chartShell">
+        <div class="chart-skel" id="chartSkel">Loading chart…</div>
         <iframe
           id="feferChart"
           class="chart-frame"
-          src="https://feferstable.vercel.app/"
-          title="FEFER / gUSDT candlestick chart"
+          title="BasedBot FEFER/WgUSDT chart"
           loading="lazy"
+          allowfullscreen
           referrerpolicy="no-referrer-when-downgrade"
-          allow="clipboard-write"
         ></iframe>
       </div>
     </section>
 
-    <!-- 2) YOUR BAG -->
-    <section class="card watch focus">
-      <div class="section-kicker">Your bag</div>
-      <div class="watch-head">
-        <div>
-          <div class="label">Your assets</div>
-          <p class="hint">Paste wallet address · see FEFER + value · save with ★</p>
-        </div>
-        <div class="watch-actions">
-          <button type="button" class="btn ghost sm" id="copy" title="Copy address">Copy</button>
-          <a id="exWallet" class="btn ghost sm" href="#" target="_blank" rel="noopener">View on explorer ↗</a>
-        </div>
-      </div>
-
-      <form id="form" class="row track-row">
-        <div class="input-wrap">
-          <span class="input-ico" aria-hidden="true">0x</span>
-          <input id="wallet" type="text" spellcheck="false" autocomplete="off"
-            placeholder="paste your wallet address" aria-label="wallet address" />
-        </div>
-        <button type="submit" class="btn primary">Check bag</button>
-        <button type="button" class="btn ghost" id="add" title="Save this wallet">★</button>
-        <button type="button" class="btn ghost" id="reset">Reset</button>
-      </form>
-      <div id="werr" class="errbox" hidden></div>
-      <div id="chips" class="chips" aria-label="saved wallets"></div>
-
-      <div class="hold-grid">
-        <div class="hold-main">
-          <div class="value-hero" aria-label="bag value in USDT">
-            <div class="value-hero-top">
-              <img class="token-logo sm" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="40" height="40" loading="lazy" onerror="this.style.display='none'" />
-              <div class="label">Worth in USDT</div>
-            </div>
-            <div class="value-row">
-              <div id="value" class="value-big">—</div>
-              <span class="unit-badge">USDT</span>
-            </div>
-            <div class="fefer-line">
-              <img class="asset-ico" src="https://cyan-bright-dormouse-440.mypinata.cloud/ipfs/Qmc2crNh82w2q6swbLndzaDkd2hbFg6cgjc3hRkGNgrdHJ" alt="" width="18" height="18" loading="lazy" onerror="this.style.display='none'" />
-              <span id="fefer" class="fefer-amt mono">—</span>
-              <span class="muted tiny">FEFER</span>
-              <span id="pct" class="chip soft">— of supply</span>
-            </div>
-            <div class="pct-bar fat" aria-hidden="true"><i id="pctBar"></i></div>
-          </div>
-        </div>
-        <div class="mini-cards">
-          <div class="card flat mini-usdt">
-            <div class="label">USDT in wallet</div>
-            <div class="num-row">
-              <div id="wgusdt" class="num accent-usdt">—</div>
-              <span class="unit-sm">USDT</span>
-            </div>
-          </div>
-          <div class="card flat">
-            <div class="label">Gas coin</div>
-            <div id="native" class="num">—</div>
-          </div>
-          <div class="card flat">
-            <div class="label">Last check</div>
-            <div id="hBlock" class="num">—</div>
-          </div>
-        </div>
-      </div>
-      <code id="addr" class="addr" title="Click to copy">—</code>
-    </section>
-
-    <!-- 3) MARKET (secondary) -->
-    <section class="market secondary">
-      <div class="sec-head">
-        <div class="label">Market snapshot</div>
-        <span class="hint">from the FEFER / USDT pool</span>
-      </div>
+    <!-- 4) MARKET (collapsed on mobile) -->
+    <details class="market-fold">
+      <summary>
+        <span class="label">Pool snapshot</span>
+        <span class="hint">USDT · FEFER · mcap · liq</span>
+      </summary>
       <div class="cards">
         <div class="card metric">
-          <div class="metric-ico" aria-hidden="true">◈</div>
           <div class="label">USDT in pool</div>
           <div id="r0" class="num">—</div>
         </div>
         <div class="card metric">
-          <div class="metric-ico" aria-hidden="true">◇</div>
           <div class="label">FEFER in pool</div>
           <div id="r1" class="num">—</div>
         </div>
         <div class="card metric">
-          <div class="metric-ico" aria-hidden="true">◎</div>
           <div class="label">Market cap</div>
           <div id="fdv" class="num">—</div>
-          <div class="sublabel">if 1B supply</div>
+          <div class="sublabel">1B supply</div>
         </div>
         <div class="card metric">
-          <div class="metric-ico" aria-hidden="true">≋</div>
           <div class="label">Liquidity ~</div>
           <div id="liq" class="num">—</div>
-          <div class="sublabel">USDT side × 2</div>
+          <div class="sublabel">USDT × 2</div>
         </div>
       </div>
-    </section>
+    </details>
 
-    <!-- 4) LINKS (quiet) -->
-    <section class="card links quiet">
-      <div class="links-head">
-        <div class="label">Useful links</div>
-      </div>
-      <div class="row links-row">
+    <!-- 5) LINKS -->
+    <section class="links quiet">
+      <div class="links-row">
         <a id="exPair" class="link-pill" href="#" target="_blank" rel="noopener"><span>Pool</span><i>↗</i></a>
         <a id="exToken" class="link-pill" href="#" target="_blank" rel="noopener"><span>Token</span><i>↗</i></a>
-        <a id="dyor" class="link-pill" href="#" target="_blank" rel="noopener"><span>Trade / DYOR</span><i>↗</i></a>
-        <a id="bridge" class="link-pill accent" href="#" target="_blank" rel="noopener"><span>Bridge USDT in</span><i>↗</i></a>
+        <a id="dyor" class="link-pill" href="#" target="_blank" rel="noopener"><span>Trade</span><i>↗</i></a>
+        <a id="bridge" class="link-pill accent" href="#" target="_blank" rel="noopener"><span>Bridge</span><i>↗</i></a>
       </div>
       <code id="pairCode" class="addr">pool —</code>
     </section>
 
     <footer>
       <div class="foot-row">
-        <span>Read-only · public data</span>
+        <span>Read-only</span>
         <span class="sep">·</span>
-        <span>saved wallets stay on this device</span>
+        <span>saved on this device</span>
         <span class="sep">·</span>
         <span>not financial advice</span>
       </div>
       <div class="foot-row muted">
-        USDT here = on-chain pool quote · not a bank USD feed ·
-        chain <span id="chain">988</span> · <span id="mode">—</span>
+        USDT = pool quote · chain <span id="chain">988</span> · <span id="mode">—</span>
       </div>
     </footer>
   </div>
-  <script src="app.js"></script>
+  <script src="app.js" defer></script>
 </body>
 </html>
