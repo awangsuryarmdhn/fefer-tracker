@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FEFER">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <!-- maskable: full-bleed bg, logo inside ~80% safe zone -->
+  <rect width="512" height="512" fill="#07090c"/>
+  <circle cx="256" cy="256" r="148" fill="url(#g)" opacity="0.16"/>
+  <circle cx="256" cy="256" r="104" fill="none" stroke="url(#g)" stroke-width="24"/>
+  <path d="M200 298 V210 h84 c32 0 54 16 54 44 0 20-12 36-34 42 l42 52h-36l-36-46h-36v46h-38zm36-78v32h44c14 0 22-6 22-16s-8-16-22-16h-44z" fill="url(#g)"/>
+</svg>

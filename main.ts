@@ -1,5 +1,8 @@
-/** FEFER tracker — Deno.serve: static + /api/price + /api/holding */
-const RPC = Deno.env.get("RPC_URL") ?? "https://rpc.stable.xyz";
+/** FEFER tracker — Deno.serve: RPC engine (batch/failover/cache) + API + static + PWA */
+const RPCS = (Deno.env.get("RPC_URLS") ?? Deno.env.get("RPC_URL") ?? "https://rpc.stable.xyz")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 const PAIR = (Deno.env.get("PAIR") ?? "0x3dea4be5615974f31624404ef288ba3b36dfeb83").toLowerCase();
 const TOKEN = (Deno.env.get("TOKEN") ?? "0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83").toLowerCase();
 const QUOTE = (Deno.env.get("QUOTE_TOKEN") ?? "0x817997ca8394e26cce3de3a076a4889b27dbf9de").toLowerCase();
@@ -15,22 +18,48 @@ const DYOR_URL = Deno.env.get("DYOR_URL") ??
 const PORT = Number(Deno.env.get("PORT") ?? "8000");
 const SUPPLY = 1e9;
 const PUBLIC = new URL("./public/", import.meta.url);
+const PRICE_MS = Number(Deno.env.get("PRICE_CACHE_MS") ?? "3500");
+const HOLD_MS = Number(Deno.env.get("HOLD_CACHE_MS") ?? "3000");
+const RPC_TIMEOUT = Number(Deno.env.get("RPC_TIMEOUT_MS") ?? "8000");
 
 // ponytail: in-mem cache; shared store if multi-isolate cold starts hurt
-let priceCache: { at: number; data: Awaited<ReturnType<typeof fetchPrice>> } | null = null;
-const CACHE_MS = 4000;
+let priceCache: { at: number; data: PriceData } | null = null;
+const holdCache = new Map<string, { at: number; data: HoldData }>();
+let rpcCursor = 0;
+let lastRpcHost = "";
 
-async function rpc(method: string, params: unknown[] = []) {
-  const r = await fetch(RPC, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
-  if (!r.ok) throw new Error(`RPC HTTP ${r.status}`);
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.message ?? "rpc error");
-  return j.result as string;
-}
+type PriceData = {
+  ok: true;
+  price: number;
+  inverse: number;
+  reserveQuote: number;
+  reserveToken: number;
+  fdv: number;
+  liqApprox: number;
+  block: number;
+  token: string;
+  quote: string;
+  pair: string;
+  chainId: number;
+  ts: number;
+};
+
+type HoldData = {
+  ok: true;
+  wallet: string;
+  fefer: number;
+  wgusdt: number;
+  native: number;
+  price: number;
+  value: number;
+  pctSupply: number;
+  block: number;
+  explorer: string;
+  tokenExplorer: string;
+  pairExplorer: string;
+};
+
+type RpcCall = { method: string; params?: unknown[] };
 
 function padAddr(a: string) {
   return a.slice(2).toLowerCase().padStart(64, "0");
@@ -41,18 +70,73 @@ function fromHex(hex: string, dec: number) {
   return Number(BigInt("0x" + (h || "0"))) / 10 ** dec;
 }
 
-async function fetchPrice() {
-  const [resHex, blockHex] = await Promise.all([
-    rpc("eth_call", [{ to: PAIR, data: "0x0902f1ac" }, "latest"]),
-    rpc("eth_blockNumber", []),
-  ]);
+function isWallet(w: string) {
+  return /^0x[0-9a-f]{40}$/.test(w);
+}
+
+function hostOf(url: string) {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+/** JSON-RPC batch + multi-RPC rotate/failover + timeout */
+async function rpcBatch(calls: RpcCall[]): Promise<string[]> {
+  if (!RPCS.length) throw new Error("no RPC_URL");
+  const body = calls.map((c, i) => ({
+    jsonrpc: "2.0",
+    id: i + 1,
+    method: c.method,
+    params: c.params ?? [],
+  }));
+  let lastErr: unknown;
+  const n = RPCS.length;
+  for (let t = 0; t < n; t++) {
+    const url = RPCS[(rpcCursor + t) % n];
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), RPC_TIMEOUT);
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ac.signal,
+      });
+      if (!r.ok) throw new Error(`RPC HTTP ${r.status}`);
+      const j = await r.json();
+      const arr = Array.isArray(j) ? j : [j];
+      const byId = new Map(
+        arr.map((x: { id: number; result?: string; error?: { message?: string } }) => [x.id, x]),
+      );
+      const out: string[] = [];
+      for (let i = 0; i < calls.length; i++) {
+        const row = byId.get(i + 1);
+        if (!row) throw new Error("rpc missing id");
+        if (row.error) throw new Error(row.error.message ?? "rpc error");
+        out.push(row.result as string);
+      }
+      rpcCursor = (rpcCursor + t) % n;
+      lastRpcHost = hostOf(url);
+      return out;
+    } catch (e) {
+      lastErr = e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+function parseReserves(resHex: string, blockHex: string): PriceData {
   const body = resHex.startsWith("0x") ? resHex.slice(2) : resHex;
   const r0 = Number(BigInt("0x" + body.slice(0, 64))) / 10 ** QUOTE_DEC;
   const r1 = Number(BigInt("0x" + body.slice(64, 128))) / 10 ** TOKEN_DEC;
   if (!(r0 > 0 && r1 > 0)) throw new Error("bad reserves");
   const price = r0 / r1;
   return {
-    ok: true as const,
+    ok: true,
     price,
     inverse: 1 / price,
     reserveQuote: r0,
@@ -68,29 +152,62 @@ async function fetchPrice() {
   };
 }
 
+async function fetchPrice(): Promise<PriceData> {
+  const [resHex, blockHex] = await rpcBatch([
+    { method: "eth_call", params: [{ to: PAIR, data: "0x0902f1ac" }, "latest"] },
+    { method: "eth_blockNumber", params: [] },
+  ]);
+  return parseReserves(resHex, blockHex);
+}
+
 async function getPrice() {
   const now = Date.now();
-  if (priceCache && now - priceCache.at < CACHE_MS) return priceCache.data;
+  if (priceCache && now - priceCache.at < PRICE_MS) return priceCache.data;
   const data = await fetchPrice();
   priceCache = { at: now, data };
   return data;
 }
 
-async function getHolding(wallet: string) {
+async function fetchHolding(wallet: string): Promise<HoldData> {
   const w = wallet.toLowerCase();
-  if (!/^0x[0-9a-f]{40}$/.test(w)) throw new Error("invalid wallet");
+  if (!isWallet(w)) throw new Error("invalid wallet");
   const balSel = "0x70a08231" + padAddr(w);
-  const [price, feferHex, wguHex, natHex] = await Promise.all([
-    getPrice(),
-    rpc("eth_call", [{ to: TOKEN, data: balSel }, "latest"]),
-    rpc("eth_call", [{ to: QUOTE, data: balSel }, "latest"]),
-    rpc("eth_getBalance", [w, "latest"]),
-  ]);
+  const priceHot = !!(priceCache && Date.now() - priceCache.at < PRICE_MS);
+  const calls: RpcCall[] = priceHot
+    ? [
+      { method: "eth_call", params: [{ to: TOKEN, data: balSel }, "latest"] },
+      { method: "eth_call", params: [{ to: QUOTE, data: balSel }, "latest"] },
+      { method: "eth_getBalance", params: [w, "latest"] },
+    ]
+    : [
+      { method: "eth_call", params: [{ to: PAIR, data: "0x0902f1ac" }, "latest"] },
+      { method: "eth_blockNumber", params: [] },
+      { method: "eth_call", params: [{ to: TOKEN, data: balSel }, "latest"] },
+      { method: "eth_call", params: [{ to: QUOTE, data: balSel }, "latest"] },
+      { method: "eth_getBalance", params: [w, "latest"] },
+    ];
+  const res = await rpcBatch(calls);
+  let price: PriceData;
+  let feferHex: string;
+  let wguHex: string;
+  let natHex: string;
+  if (priceHot) {
+    price = priceCache!.data;
+    feferHex = res[0];
+    wguHex = res[1];
+    natHex = res[2];
+  } else {
+    price = parseReserves(res[0], res[1]);
+    priceCache = { at: Date.now(), data: price };
+    feferHex = res[2];
+    wguHex = res[3];
+    natHex = res[4];
+  }
   const fefer = fromHex(feferHex, TOKEN_DEC);
   const wgusdt = fromHex(wguHex, QUOTE_DEC);
   const native = fromHex(natHex, 18);
   return {
-    ok: true as const,
+    ok: true,
     wallet: w,
     fefer,
     wgusdt,
@@ -105,19 +222,53 @@ async function getHolding(wallet: string) {
   };
 }
 
+async function getHolding(wallet: string) {
+  const w = wallet.toLowerCase();
+  const now = Date.now();
+  const hit = holdCache.get(w);
+  if (hit && now - hit.at < HOLD_MS) return hit.data;
+  const data = await fetchHolding(w);
+  holdCache.set(w, { at: now, data });
+  if (holdCache.size > 64) {
+    const first = holdCache.keys().next().value;
+    if (first) holdCache.delete(first);
+  }
+  return data;
+}
+
+/** One payload for UI — client = 1 HTTP */
+async function getSnapshot(wallet: string) {
+  const hold = await getHolding(wallet);
+  const price = priceCache?.data ?? await getPrice();
+  return {
+    ok: true as const,
+    price,
+    holding: hold,
+    engine: {
+      host: lastRpcHost || null,
+      rpcs: RPCS.length,
+      priceCacheMs: PRICE_MS,
+      holdCacheMs: HOLD_MS,
+    },
+  };
+}
+
 function cors(extra: HeadersInit = {}) {
   return {
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, OPTIONS",
-    "cache-control": "no-store",
+    "access-control-allow-headers": "content-type",
     ...extra,
   };
 }
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, cache = "no-store") {
   return new Response(JSON.stringify(data), {
     status,
-    headers: cors({ "content-type": "application/json; charset=utf-8" }),
+    headers: cors({
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": cache,
+    }),
   });
 }
 
@@ -126,9 +277,21 @@ const MIME: Record<string, string> = {
   ".js": "application/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".png": "image/png",
   ".ico": "image/x-icon",
+  ".webp": "image/webp",
 };
+
+function cacheFor(path: string) {
+  if (path === "/sw.js") return "no-cache";
+  if (path.endsWith(".html") || path === "/" || path === "/index.html") return "no-cache";
+  if (/\.(js|css|svg|png|webp|ico|webmanifest)$/.test(path)) {
+    return "public, max-age=300, stale-while-revalidate=86400";
+  }
+  return "no-store";
+}
 
 async function staticFile(pathname: string) {
   let path = pathname === "/" ? "/index.html" : pathname;
@@ -138,14 +301,16 @@ async function staticFile(pathname: string) {
     const data = await Deno.readFile(file);
     const ext = path.slice(path.lastIndexOf("."));
     return new Response(data, {
-      headers: cors({ "content-type": MIME[ext] ?? "application/octet-stream" }),
+      headers: cors({
+        "content-type": MIME[ext] ?? "application/octet-stream",
+        "cache-control": cacheFor(path),
+      }),
     });
   } catch {
     return new Response("not found", { status: 404 });
   }
 }
 
-// Deploy: platform binds HTTP (omit port). Local: listen PORT.
 const ON_DEPLOY = Boolean(Deno.env.get("DENO_DEPLOYMENT_ID"));
 Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors() });
@@ -160,12 +325,16 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
         token: TOKEN,
         pair: PAIR,
         explorer: EXPLORER,
+        rpcs: RPCS.length,
+        rpcHost: lastRpcHost || null,
+        cache: { priceMs: PRICE_MS, holdMs: HOLD_MS },
       });
     }
     if (pathname === "/api/config") {
+      // no raw RPC to client — server is engine
       return json({
         ok: true,
-        rpc: RPC,
+        mode: "api",
         chainId: CHAIN_ID,
         pair: PAIR,
         token: TOKEN,
@@ -177,13 +346,34 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
         bridgeUrl: BRIDGE_URL,
         dyorUrl: DYOR_URL,
         supply: SUPPLY,
-      });
+        pollMs: 5000,
+        chartBase: "https://basedbot.app/embed/token/stable/",
+        engine: "server",
+      }, 200, "public, max-age=60");
     }
-    if (pathname === "/api/price") return json(await getPrice());
+    if (pathname === "/api/price") {
+      return json(
+        await getPrice(),
+        200,
+        `public, max-age=2, stale-while-revalidate=${Math.max(2, Math.floor(PRICE_MS / 1000))}`,
+      );
+    }
+    if (pathname === "/api/snapshot") {
+      const q = url.searchParams.get("wallet") || DEFAULT_WALLET;
+      return json(
+        await getSnapshot(q),
+        200,
+        `public, max-age=2, stale-while-revalidate=${Math.max(2, Math.floor(HOLD_MS / 1000))}`,
+      );
+    }
     if (pathname === "/api/holding" || pathname.startsWith("/api/holding/")) {
       const fromPath = pathname.replace(/^\/api\/holding\/?/, "");
       const q = url.searchParams.get("wallet") || fromPath || DEFAULT_WALLET;
-      return json(await getHolding(q));
+      return json(
+        await getHolding(q),
+        200,
+        `public, max-age=2, stale-while-revalidate=${Math.max(2, Math.floor(HOLD_MS / 1000))}`,
+      );
     }
     return await staticFile(pathname);
   } catch (e) {
@@ -191,4 +381,6 @@ Deno.serve(ON_DEPLOY ? {} : { port: PORT }, async (req) => {
   }
 });
 
-if (!ON_DEPLOY) console.log(`FEFER tracker http://127.0.0.1:${PORT}`);
+if (!ON_DEPLOY) {
+  console.log(`FEFER tracker http://127.0.0.1:${PORT} · RPC×${RPCS.length}`);
+}

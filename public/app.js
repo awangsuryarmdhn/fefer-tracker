@@ -1,9 +1,8 @@
 (() => {
+  // Thin client — all chain math on Deno RPC engine (/api/snapshot)
   const FALLBACK = {
-    rpc: "https://rpc.stable.xyz",
     pair: "0x3dea4be5615974f31624404ef288ba3b36dfeb83",
     token: "0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83",
-    quote: "0x817997ca8394e26cce3de3a076a4889b27dbf9de",
     defaultWallet: "0x1E1afF9d9E387D69b89839E477e63f24e5Ec12C5",
     explorerBase: "https://stablescan.xyz",
     bridgeUrl:
@@ -11,17 +10,20 @@
     dyorUrl:
       "https://dyorswap.org/launchinfo/?id=0xeaf7aC0FdF150CDD89340fB762D83848De6A7b83&chainId=988",
     chainId: 988,
-    supply: 1e9,
+    pollMs: 5000,
+    chartBase: "https://basedbot.app/embed/token/stable/",
   };
   const LS_ACTIVE = "fefer.active";
   const LS_BOOK = "fefer.bookmarks";
   const MAX_BOOK = 10;
-  const CHART_BASE = "https://basedbot.app/embed/token/stable/";
   let lastPrice = null;
   let basePrice = null;
   let flashTimer = 0;
   let chartReady = false;
   let chartSrc = "";
+  let pollMs = FALLBACK.pollMs;
+  let timer = 0;
+  let inflight = null;
   const $ = (id) => document.getElementById(id);
 
   function fmt(n, d = 6) {
@@ -90,86 +92,18 @@
       const r = await fetch("/api/config", { cache: "no-store" });
       if (!r.ok) throw 0;
       const j = await r.json();
-      if (j.ok) return { ...FALLBACK, ...j, mode: "api" };
+      if (j.ok) return { ...FALLBACK, ...j };
     } catch {}
-    return { ...FALLBACK, mode: "rpc" };
+    return { ...FALLBACK, mode: "offline" };
   }
 
-  async function rpc(url, method, params) {
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-    });
-    if (!r.ok) throw new Error("RPC " + r.status);
+  /** 1 HTTP → price + bag (server RPC engine) */
+  async function fetchSnapshot(w) {
+    const r = await fetch("/api/snapshot?wallet=" + encodeURIComponent(w), { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
     const j = await r.json();
-    if (j.error) throw new Error(j.error.message || "rpc error");
-    return j.result;
-  }
-
-  function balData(wallet) {
-    return "0x70a08231" + wallet.slice(2).toLowerCase().padStart(64, "0");
-  }
-
-  async function fetchPrice(cfg) {
-    if (cfg.mode === "api") {
-      const r = await fetch("/api/price", { cache: "no-store" });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "api");
-      return j;
-    }
-    const resHex = await rpc(cfg.rpc, "eth_call", [{ to: cfg.pair, data: "0x0902f1ac" }, "latest"]);
-    const blockHex = await rpc(cfg.rpc, "eth_blockNumber", []);
-    const body = resHex.slice(2);
-    const r0 = Number(BigInt("0x" + body.slice(0, 64))) / 1e18;
-    const r1 = Number(BigInt("0x" + body.slice(64, 128))) / 1e18;
-    const price = r0 / r1;
-    return {
-      ok: true,
-      price,
-      inverse: 1 / price,
-      reserveQuote: r0,
-      reserveToken: r1,
-      fdv: (cfg.supply || 1e9) * price,
-      liqApprox: 2 * r0,
-      block: parseInt(blockHex, 16),
-    };
-  }
-
-  async function fetchHolding(cfg, wallet) {
-    if (cfg.mode === "api") {
-      const r = await fetch("/api/holding?wallet=" + encodeURIComponent(wallet), { cache: "no-store" });
-      const j = await r.json();
-      if (!j.ok) throw new Error(j.error || "api");
-      return j;
-    }
-    const [resHex, blockHex, feferHex, wguHex, natHex] = await Promise.all([
-      rpc(cfg.rpc, "eth_call", [{ to: cfg.pair, data: "0x0902f1ac" }, "latest"]),
-      rpc(cfg.rpc, "eth_blockNumber", []),
-      rpc(cfg.rpc, "eth_call", [{ to: cfg.token, data: balData(wallet) }, "latest"]),
-      rpc(cfg.rpc, "eth_call", [{ to: cfg.quote, data: balData(wallet) }, "latest"]),
-      rpc(cfg.rpc, "eth_getBalance", [wallet, "latest"]),
-    ]);
-    const body = resHex.slice(2);
-    const r0 = Number(BigInt("0x" + body.slice(0, 64))) / 1e18;
-    const r1 = Number(BigInt("0x" + body.slice(64, 128))) / 1e18;
-    const price = r0 / r1;
-    const fefer = Number(BigInt(feferHex)) / 1e18;
-    const wgusdt = Number(BigInt(wguHex)) / 1e18;
-    const native = Number(BigInt(natHex)) / 1e18;
-    const base = (cfg.explorerBase || FALLBACK.explorerBase).replace(/\/$/, "");
-    return {
-      ok: true,
-      wallet,
-      fefer,
-      wgusdt,
-      native,
-      price,
-      value: fefer * price,
-      pctSupply: (fefer / (cfg.supply || 1e9)) * 100,
-      block: parseInt(blockHex, 16),
-      explorer: base + "/address/" + wallet,
-    };
+    if (!j.ok) throw new Error(j.error || "snapshot");
+    return j;
   }
 
   function setStatus(ok, msg) {
@@ -235,17 +169,18 @@
     $("bridge").href = cfg.bridgeUrl || FALLBACK.bridgeUrl;
     $("pairCode").textContent = "pool " + pair;
     $("chain").textContent = String(cfg.chainId || 988);
-    $("mode").textContent = cfg.mode === "api" ? "server" : "direct";
+    $("mode").textContent = "server";
     const holders = $("stripHolders");
     if (holders) holders.href = base + "/token/" + token + "#holders";
   }
 
   function chartUrl(addr) {
+    const base = (cfg && cfg.chartBase) || FALLBACK.chartBase;
     const token = ((cfg && cfg.token) || FALLBACK.token).toLowerCase();
     const w = valid(addr)
       ? addr.toLowerCase()
       : ((cfg && cfg.defaultWallet) || FALLBACK.defaultWallet).toLowerCase();
-    return CHART_BASE + token + "?interval=5&wallets=" + encodeURIComponent(w);
+    return base + token + "?interval=5&wallets=" + encodeURIComponent(w);
   }
 
   function syncChart(force) {
@@ -262,6 +197,18 @@
     frame.onload = () => {
       if (shell) shell.classList.add("ready");
     };
+    if (!frame.dataset.warmed) {
+      frame.dataset.warmed = "1";
+      try {
+        const l = document.createElement("link");
+        l.rel = "preconnect";
+        l.href = "https://basedbot.app";
+        l.crossOrigin = "";
+        if (!document.querySelector('link[href="https://basedbot.app"]')) {
+          document.head.appendChild(l);
+        }
+      } catch {}
+    }
     frame.src = src;
   }
 
@@ -282,15 +229,14 @@
             boot();
           }
         },
-        { rootMargin: "180px 0px" },
+        { rootMargin: "220px 0px" },
       );
       io.observe(shell || frame);
     } else if ("requestIdleCallback" in window) {
-      requestIdleCallback(boot, { timeout: 2500 });
+      requestIdleCallback(boot, { timeout: 2000 });
     } else {
-      setTimeout(boot, 1200);
+      setTimeout(boot, 900);
     }
-    // fail-safe: hide skel if load hangs
     setTimeout(() => {
       if (shell && chartReady && !shell.classList.contains("ready")) {
         shell.classList.add("ready");
@@ -348,7 +294,7 @@
     u.searchParams.set("wallet", wallet);
     history.replaceState(null, "", u);
     bindWalletUI();
-    tickHold().catch(console.error);
+    tick(true).catch(console.error);
   }
 
   function addBookmark(addr) {
@@ -424,45 +370,54 @@
     if (d.explorer) $("exWallet").href = d.explorer;
     const bar = $("pctBar");
     if (bar) {
-      // visual only — tiny bags still show a hair
       const p = Number(d.pctSupply) || 0;
       const w = Math.min(100, Math.max(p > 0 ? 1.5 : 0, p * 40));
       bar.style.width = w + "%";
     }
   }
 
-  async function tickPrice() {
-    const d = await fetchPrice(cfg);
-    paintPrice(d);
-    return d;
+  function schedule() {
+    clearTimeout(timer);
+    if (document.hidden) return;
+    timer = setTimeout(() => tick(false).catch(console.error), pollMs);
   }
 
-  async function tickHold() {
-    if (!wallet) return;
-    const d = await fetchHolding(cfg, wallet);
-    paintHold(d);
-    return d;
-  }
-
-  async function tick() {
-    try {
-      if (!cfg) {
-        cfg = await loadConfig();
-        books = loadBookmarks();
-        wallet = resolveWallet(cfg);
-        setActive(wallet);
-        bindStaticLinks();
-        bindWalletUI();
-        armChartLazy();
+  async function tick(force) {
+    if (inflight && !force) return inflight;
+    const run = (async () => {
+      try {
+        if (!cfg) {
+          cfg = await loadConfig();
+          books = loadBookmarks();
+          wallet = resolveWallet(cfg);
+          pollMs = Number(cfg.pollMs) || FALLBACK.pollMs;
+          setActive(wallet);
+          bindStaticLinks();
+          bindWalletUI();
+          armChartLazy();
+        }
+        if (document.hidden && !force) return;
+        setStatus(null, "updating…");
+        const snap = await fetchSnapshot(wallet);
+        paintPrice(snap.price);
+        paintHold(snap.holding);
+        $("age").textContent = new Date().toLocaleTimeString();
+        if (snap.engine && snap.engine.host) {
+          $("mode").textContent = "rpc·" + snap.engine.host;
+        } else {
+          $("mode").textContent = "server";
+        }
+        setStatus(true, "live");
+      } catch (e) {
+        setStatus(false, "offline");
+        console.error(e);
+      } finally {
+        inflight = null;
+        schedule();
       }
-      setStatus(null, "updating…");
-      await Promise.all([tickPrice(), tickHold()]);
-      $("age").textContent = new Date().toLocaleTimeString();
-      setStatus(true, "live");
-    } catch (e) {
-      setStatus(false, "offline");
-      console.error(e);
-    }
+    })();
+    inflight = run;
+    return run;
   }
 
   $("form").addEventListener("submit", (e) => {
@@ -509,6 +464,16 @@
     copyText(pair, $("pairCode"));
   });
 
-  tick();
-  setInterval(tick, 5000);
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) tick(false).catch(console.error);
+    else clearTimeout(timer);
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    });
+  }
+
+  tick(true);
 })();
